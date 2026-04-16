@@ -81,7 +81,7 @@ export function Sidebar({ userName, userRole }: SidebarProps) {
           <div>
             <p className="text-white font-semibold text-sm leading-tight">Les Hauts de</p>
             <p className="text-white font-semibold text-sm leading-tight">Californie</p>
-            <p className="text-navy-300 text-xs">SAV Jardinage</p>
+            <p className="text-navy-300 text-xs">SAV JardiPro</p>
           </div>
         </div>
       </div>
