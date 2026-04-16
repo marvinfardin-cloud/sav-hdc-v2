@@ -1,0 +1,111 @@
+generator client {
+  provider = "prisma-client-js"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+enum Role {
+  ADMIN
+  TECHNICIEN
+}
+
+enum Statut {
+  RECU
+  DIAGNOSTIC
+  ATTENTE_PIECES
+  EN_REPARATION
+  PRET
+  LIVRE
+}
+
+model User {
+  id           String    @id @default(cuid())
+  email        String    @unique
+  nom          String
+  role         Role      @default(TECHNICIEN)
+  passwordHash String
+  createdAt    DateTime  @default(now())
+  tickets      Ticket[]
+  sessions     Session[]
+}
+
+model Client {
+  id        String       @id @default(cuid())
+  email     String       @unique
+  nom       String
+  prenom    String
+  telephone String?
+  createdAt DateTime     @default(now())
+  tickets   Ticket[]
+  rdvs      RendezVous[]
+  sessions  Session[]
+}
+
+model Ticket {
+  id             String       @id @default(cuid())
+  numero         String       @unique
+  clientId       String
+  client         Client       @relation(fields: [clientId], references: [id])
+  materiel       String
+  marque         String
+  modele         String
+  numeroSerie    String?
+  panneDeclaree  String
+  statut         Statut       @default(RECU)
+  dateDepot      DateTime     @default(now())
+  dateEstimee    DateTime?
+  notesPubliques String?
+  notesPrivees   String?
+  technicienId   String?
+  technicien     User?        @relation(fields: [technicienId], references: [id])
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+  historique     Historique[]
+  photos         Photo[]
+}
+
+model Historique {
+  id        String   @id @default(cuid())
+  ticketId  String
+  ticket    Ticket   @relation(fields: [ticketId], references: [id])
+  statut    Statut
+  note      String?
+  createdAt DateTime @default(now())
+}
+
+model RendezVous {
+  id        String   @id @default(cuid())
+  clientId  String
+  client    Client   @relation(fields: [clientId], references: [id])
+  dateHeure DateTime
+  duree     Int      @default(30)
+  type      String
+  statut    String   @default("confirme")
+  notes     String?
+  createdAt DateTime @default(now())
+}
+
+model Session {
+  id        String   @id @default(cuid())
+  clientId  String?
+  client    Client?  @relation(fields: [clientId], references: [id])
+  userId    String?
+  user      User?    @relation(fields: [userId], references: [id])
+  token     String   @unique
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+}
+
+model Photo {
+  id        String   @id @default(cuid())
+  ticketId  String
+  ticket    Ticket   @relation(fields: [ticketId], references: [id])
+  url       String
+  type      String
+  createdAt DateTime @default(now())
+}
