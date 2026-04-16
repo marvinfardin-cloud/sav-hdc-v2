@@ -11,9 +11,36 @@ interface TimeSlot {
 }
 
 const RDV_TYPES = [
-  { value: "depot", label: "Dépôt de matériel", icon: "📦", description: "Déposer votre appareil pour réparation" },
-  { value: "retrait", label: "Retrait de matériel", icon: "✅", description: "Récupérer votre appareil réparé" },
-  { value: "diagnostic", label: "Diagnostic", icon: "🔍", description: "Diagnostic de votre équipement" },
+  {
+    value: "depot",
+    label: "Dépôt de matériel",
+    description: "Déposer votre appareil pour réparation",
+    icon: (
+      <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
+      </svg>
+    ),
+  },
+  {
+    value: "retrait",
+    label: "Retrait de matériel",
+    description: "Récupérer votre appareil réparé",
+    icon: (
+      <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+      </svg>
+    ),
+  },
+  {
+    value: "diagnostic",
+    label: "Diagnostic",
+    description: "Diagnostic de votre équipement",
+    icon: (
+      <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4" />
+      </svg>
+    ),
+  },
 ];
 
 export default function RdvPage() {
@@ -106,7 +133,7 @@ export default function RdvPage() {
     <div className="space-y-6 animate-fadeIn">
       <div>
         <h1 className="text-2xl font-bold text-gray-900">Prendre un rendez-vous</h1>
-        <p className="text-gray-500 text-sm">SAV Les Hauts de Californie — Horaires: 7h-12h et 13h-15h</p>
+        <p className="text-gray-500 text-sm">SAV Les Hauts de Californie — Horaires: 7h-12h et 13h-15h30</p>
       </div>
 
       {/* Progress steps */}
@@ -143,7 +170,7 @@ export default function RdvPage() {
                   selectedType === type.value ? "border-navy-700 bg-navy-50" : "border-gray-100"
                 }`}
               >
-                <span className="text-2xl">{type.icon}</span>
+                <span className="text-navy-600 flex-shrink-0">{type.icon}</span>
                 <div>
                   <p className="font-semibold text-gray-900">{type.label}</p>
                   <p className="text-sm text-gray-500">{type.description}</p>
@@ -166,7 +193,7 @@ export default function RdvPage() {
           </div>
 
           <div className="inline-flex items-center gap-2 bg-navy-50 text-navy-700 px-3 py-2 rounded-lg text-sm font-medium">
-            {RDV_TYPES.find((t) => t.value === selectedType)?.icon}
+            <span className="w-4 h-4">{RDV_TYPES.find((t) => t.value === selectedType)?.icon}</span>
             {RDV_TYPES.find((t) => t.value === selectedType)?.label}
           </div>
 
