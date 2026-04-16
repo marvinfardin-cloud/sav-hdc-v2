@@ -16,6 +16,7 @@ async function main() {
   await prisma.user.deleteMany();
 
   const passwordHash = await bcrypt.hash("Admin2024!", 12);
+  const clientPasswordHash = await bcrypt.hash("Client2024!", 12);
 
   // Create users
   const admin = await prisma.user.create({
@@ -55,6 +56,7 @@ async function main() {
         nom: "Dupont",
         prenom: "Marie",
         telephone: "+596 696 12 34 56",
+        passwordHash: clientPasswordHash,
       },
     }),
     prisma.client.create({
@@ -63,6 +65,7 @@ async function main() {
         nom: "Martin",
         prenom: "Jean-Paul",
         telephone: "+596 696 23 45 67",
+        passwordHash: clientPasswordHash,
       },
     }),
     prisma.client.create({
@@ -71,6 +74,7 @@ async function main() {
         nom: "Joseph",
         prenom: "Claudette",
         telephone: "+596 696 34 56 78",
+        passwordHash: clientPasswordHash,
       },
     }),
     prisma.client.create({
@@ -79,6 +83,7 @@ async function main() {
         nom: "Saint-Louis",
         prenom: "Patrick",
         telephone: "+596 696 45 67 89",
+        passwordHash: clientPasswordHash,
       },
     }),
     prisma.client.create({
@@ -87,6 +92,7 @@ async function main() {
         nom: "Lollivier",
         prenom: "Nadège",
         telephone: "+596 696 56 78 90",
+        passwordHash: clientPasswordHash,
       },
     }),
   ]);
@@ -282,6 +288,8 @@ async function main() {
   console.log(`  Admin: zingzag10@hotmail.fr / Admin2024!`);
   console.log(`  Tech 1: jean.technicien@hauts-californie.fr / Admin2024!`);
   console.log(`  Tech 2: marc.technicien@hauts-californie.fr / Admin2024!`);
+  console.log(`  Client 1: marie.dupont@email.com / Client2024!`);
+  console.log(`  Client 2: jean-paul.martin@email.com / Client2024!`);
 }
 
 main()
