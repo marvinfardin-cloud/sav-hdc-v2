@@ -36,15 +36,16 @@ model User {
 }
 
 model Client {
-  id        String       @id @default(cuid())
-  email     String       @unique
-  nom       String
-  prenom    String
-  telephone String?
-  createdAt DateTime     @default(now())
-  tickets   Ticket[]
-  rdvs      RendezVous[]
-  sessions  Session[]
+  id           String       @id @default(cuid())
+  email        String       @unique
+  nom          String
+  prenom       String
+  telephone    String?
+  passwordHash String?
+  createdAt    DateTime     @default(now())
+  tickets      Ticket[]
+  rdvs         RendezVous[]
+  sessions     Session[]
 }
 
 model Ticket {
