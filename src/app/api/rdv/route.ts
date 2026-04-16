@@ -21,9 +21,10 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const [hours, minutes] = time.split(":").map(Number);
-    const dateHeure = new Date(date);
-    dateHeure.setHours(hours, minutes, 0, 0);
+    // Interpret the selected date+time as Martinique local (UTC-4) so the
+    // stored UTC value is correct regardless of server timezone (Vercel = UTC).
+    // e.g. "2026-04-16" + "08:00" → "2026-04-16T08:00:00-04:00" → 12:00 UTC
+    const dateHeure = new Date(`${date}T${time}:00-04:00`);
 
     // Check if slot is still available
     const startWindow = new Date(dateHeure.getTime() - 1000);

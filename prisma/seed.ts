@@ -241,15 +241,17 @@ async function main() {
 
   console.log("✅ Tickets créés");
 
-  // Create appointments
-  const today = new Date();
-  today.setHours(0, 0, 0, 0);
+  // Create appointments — times expressed in Martinique local (UTC-4)
+  // Using ISO offset -04:00 so the DB stores the correct UTC value regardless of server TZ
+  const todayStr = new Date().toLocaleDateString("en-CA", { timeZone: "America/Martinique" });
+  const tomorrowDate = new Date(new Date().getTime() + 24 * 60 * 60 * 1000);
+  const tomorrowStr = tomorrowDate.toLocaleDateString("en-CA", { timeZone: "America/Martinique" });
 
   await prisma.rendezVous.createMany({
     data: [
       {
         clientId: clients[2].id,
-        dateHeure: new Date(today.getTime() + 8 * 60 * 60 * 1000),
+        dateHeure: new Date(`${todayStr}T08:00:00-04:00`),
         duree: 30,
         type: "depot",
         statut: "confirme",
@@ -257,7 +259,7 @@ async function main() {
       },
       {
         clientId: clients[1].id,
-        dateHeure: new Date(today.getTime() + 10 * 60 * 60 * 1000),
+        dateHeure: new Date(`${todayStr}T10:00:00-04:00`),
         duree: 30,
         type: "retrait",
         statut: "confirme",
@@ -265,7 +267,7 @@ async function main() {
       },
       {
         clientId: clients[3].id,
-        dateHeure: new Date(today.getTime() + 24 * 60 * 60 * 1000 + 9 * 60 * 60 * 1000),
+        dateHeure: new Date(`${tomorrowStr}T09:00:00-04:00`),
         duree: 30,
         type: "diagnostic",
         statut: "confirme",

@@ -9,10 +9,11 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ error: "Non autorisé" }, { status: 401, headers: noCacheHeaders() });
   }
 
-  const today = new Date();
-  today.setHours(0, 0, 0, 0);
-  const tomorrow = new Date(today);
-  tomorrow.setDate(tomorrow.getDate() + 1);
+  // Build today's window using Martinique midnight (UTC-4, no DST).
+  const todayStr = new Date().toLocaleDateString("en-CA", { timeZone: "America/Martinique" });
+  const today    = new Date(`${todayStr}T00:00:00-04:00`);
+  const tomorrow = new Date(`${todayStr}T00:00:00-04:00`);
+  tomorrow.setUTCDate(tomorrow.getUTCDate() + 1);
 
   const [
     totalTickets,

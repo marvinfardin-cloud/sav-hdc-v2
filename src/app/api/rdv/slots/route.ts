@@ -23,8 +23,14 @@ export async function GET(request: NextRequest) {
     );
   }
 
-  const date = new Date(dateStr);
-  const dayOfWeek = date.getDay();
+  // Treat dateStr as a Martinique local date (UTC-4, no DST).
+  // Build the day boundaries in Martinique time so the DB query is correct.
+  const startOfDay = new Date(`${dateStr}T00:00:00-04:00`);
+  const endOfDay   = new Date(`${dateStr}T23:59:59.999-04:00`);
+
+  // Derive day-of-week from the Martinique date string to avoid UTC date shifting.
+  const [y, mo, d] = dateStr.split("-").map(Number);
+  const dayOfWeek = new Date(y, mo - 1, d).getDay();
 
   // No appointments on Sunday (0)
   if (dayOfWeek === 0) {
@@ -36,11 +42,6 @@ export async function GET(request: NextRequest) {
     ? MORNING_SLOTS
     : [...MORNING_SLOTS, ...AFTERNOON_SLOTS];
 
-  const startOfDay = new Date(date);
-  startOfDay.setHours(0, 0, 0, 0);
-  const endOfDay = new Date(date);
-  endOfDay.setHours(23, 59, 59, 999);
-
   const existingRdvs = await prisma.rendezVous.findMany({
     where: {
       dateHeure: { gte: startOfDay, lte: endOfDay },
@@ -49,10 +50,11 @@ export async function GET(request: NextRequest) {
     select: { dateHeure: true },
   });
 
+  // Martinique is UTC-4 with no DST — subtract 4 hours from stored UTC to get local hour.
   const bookedTimes = new Set(
     existingRdvs.map((rdv) => {
-      const h = rdv.dateHeure.getHours();
-      const m = rdv.dateHeure.getMinutes();
+      const h = ((rdv.dateHeure.getUTCHours() - 4) + 24) % 24;
+      const m = rdv.dateHeure.getUTCMinutes();
       return h + m / 60;
     })
   );
