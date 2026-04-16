@@ -133,7 +133,7 @@ export default function RdvPage() {
     <div className="space-y-6 animate-fadeIn">
       <div>
         <h1 className="text-2xl font-bold text-gray-900">Prendre un rendez-vous</h1>
-        <p className="text-gray-500 text-sm">SAV Les Hauts de Californie — Horaires: 7h-12h et 13h-15h30</p>
+        <p className="text-gray-500 text-sm">SAV Les Hauts de Californie — Horaires: 7h-12h et 13h-16h00</p>
       </div>
 
       {/* Progress steps */}

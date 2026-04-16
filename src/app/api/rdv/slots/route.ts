@@ -2,9 +2,9 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { noCacheHeaders } from "@/lib/utils";
 
-// Available hours: 07:00-12:00 and 13:00-15:30, 30min slots
+// Available hours: 07:00-12:00 and 13:00-16:00, 30min slots
 const MORNING_SLOTS = [7, 7.5, 8, 8.5, 9, 9.5, 10, 10.5, 11, 11.5];
-const AFTERNOON_SLOTS = [13, 13.5, 14, 14.5, 15];
+const AFTERNOON_SLOTS = [13, 13.5, 14, 14.5, 15, 15.5];
 
 function decimalToTime(decimal: number): string {
   const hours = Math.floor(decimal);
