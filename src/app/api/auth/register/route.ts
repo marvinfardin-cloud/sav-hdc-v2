@@ -8,9 +8,9 @@ export async function POST(request: NextRequest) {
   try {
     const { email, password, prenom, nom, telephone } = await request.json();
 
-    if (!email || !password || !prenom || !nom) {
+    if (!email || !password || !prenom || !nom || !telephone) {
       return NextResponse.json(
-        { error: "Email, mot de passe, prénom et nom sont requis" },
+        { error: "Email, mot de passe, prénom, nom et téléphone sont requis" },
         { status: 400, headers: noCacheHeaders() }
       );
     }
@@ -37,7 +37,7 @@ export async function POST(request: NextRequest) {
         email,
         nom,
         prenom,
-        telephone: telephone || null,
+        telephone,
         passwordHash,
       },
     });

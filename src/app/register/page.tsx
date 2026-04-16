@@ -45,7 +45,7 @@ export default function RegisterPage() {
           prenom: form.prenom,
           nom: form.nom,
           email: form.email,
-          telephone: form.telephone || undefined,
+          telephone: form.telephone,
           password: form.password,
         }),
       });
@@ -128,13 +128,14 @@ export default function RegisterPage() {
             </div>
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
-                Téléphone <span className="text-gray-400 font-normal">(optionnel)</span>
+                Téléphone
               </label>
               <input
                 type="tel"
                 name="telephone"
                 value={form.telephone}
                 onChange={handleChange}
+                required
                 placeholder="+596 696 12 34 56"
                 className="w-full px-3 py-2.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-navy-500 focus:border-navy-500 transition-colors"
               />
