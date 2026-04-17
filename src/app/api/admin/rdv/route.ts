@@ -10,42 +10,46 @@ export async function GET(request: NextRequest) {
   }
 
   const { searchParams } = request.nextUrl;
-  const dateStr = searchParams.get("date");
-  const view = searchParams.get("view") || "week";
+  const view = searchParams.get("view") || "day";
 
-  let startDate: Date;
+  // Default to today in Martinique time (UTC-4, no DST)
+  const nowMQ = new Date(Date.now() - 4 * 60 * 60 * 1000);
+  const defaultDate = nowMQ.toISOString().split("T")[0];
+  const dateStr = searchParams.get("date") || defaultDate;
+
+  // Parse date as Martinique local midnight (UTC-4)
+  let startDate = new Date(`${dateStr}T00:00:00-04:00`);
   let endDate: Date;
 
-  if (dateStr) {
-    startDate = new Date(dateStr);
-    startDate.setHours(0, 0, 0, 0);
+  if (view === "week") {
+    // Align to Monday of the week using getDay() on the Martinique date
+    const [y, mo, d] = dateStr.split("-").map(Number);
+    const dayOfWeek = new Date(y, mo - 1, d).getDay(); // 0=Sun … 6=Sat
+    const diff = dayOfWeek === 0 ? -6 : 1 - dayOfWeek;
+    startDate = new Date(startDate.getTime() + diff * 24 * 60 * 60 * 1000);
+    endDate = new Date(startDate.getTime() + 7 * 24 * 60 * 60 * 1000);
   } else {
-    startDate = new Date();
-    startDate.setHours(0, 0, 0, 0);
-  }
-
-  if (view === "day") {
-    endDate = new Date(startDate);
-    endDate.setDate(endDate.getDate() + 1);
-  } else {
-    // Week view - start from Monday
-    const day = startDate.getDay();
-    const diff = day === 0 ? -6 : 1 - day;
-    startDate.setDate(startDate.getDate() + diff);
-    endDate = new Date(startDate);
-    endDate.setDate(endDate.getDate() + 7);
+    endDate = new Date(startDate.getTime() + 24 * 60 * 60 * 1000);
   }
 
   const rdvs = await prisma.rendezVous.findMany({
     where: {
       dateHeure: { gte: startDate, lt: endDate },
+      statut: { not: "annule" },
     },
     orderBy: { dateHeure: "asc" },
-    include: { client: true },
+    include: {
+      client: {
+        include: {
+          tickets: {
+            orderBy: { dateDepot: "desc" },
+            take: 1,
+            select: { numero: true, materiel: true, marque: true, modele: true },
+          },
+        },
+      },
+    },
   });
 
-  return NextResponse.json(
-    { rdvs, startDate, endDate },
-    { headers: noCacheHeaders() }
-  );
+  return NextResponse.json({ rdvs, startDate, endDate }, { headers: noCacheHeaders() });
 }

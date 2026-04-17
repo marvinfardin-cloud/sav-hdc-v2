@@ -1,7 +1,13 @@
 "use client";
 
 import { useEffect, useState, useCallback } from "react";
-import { formatTime, RDV_TYPE_LABELS, RDV_TYPE_COLORS } from "@/lib/utils";
+
+interface LatestTicket {
+  numero: string;
+  materiel: string;
+  marque: string;
+  modele: string;
+}
 
 interface Rdv {
   id: string;
@@ -9,237 +15,276 @@ interface Rdv {
   type: string;
   statut: string;
   notes?: string;
-  client: { nom: string; prenom: string; telephone?: string };
+  client: {
+    nom: string;
+    prenom: string;
+    telephone?: string;
+    tickets: LatestTicket[];
+  };
 }
 
-const DAYS_FR = ["Lun", "Mar", "Mer", "Jeu", "Ven", "Sam", "Dim"];
-const DAYS_FULL = ["Lundi", "Mardi", "Mercredi", "Jeudi", "Vendredi", "Samedi", "Dimanche"];
-const MONTHS_FR = ["Janvier", "Février", "Mars", "Avril", "Mai", "Juin", "Juillet", "Août", "Septembre", "Octobre", "Novembre", "Décembre"];
+const RDV_CONFIG: Record<string, { label: string; bg: string; border: string; badge: string; dot: string }> = {
+  depot: {
+    label: "Dépôt",
+    bg: "bg-blue-50/60",
+    border: "border-l-blue-400",
+    badge: "bg-blue-100 text-blue-800",
+    dot: "bg-blue-500",
+  },
+  retrait: {
+    label: "Retrait",
+    bg: "bg-green-50/60",
+    border: "border-l-green-400",
+    badge: "bg-green-100 text-green-800",
+    dot: "bg-green-500",
+  },
+  diagnostic: {
+    label: "Diagnostic",
+    bg: "bg-orange-50/60",
+    border: "border-l-orange-400",
+    badge: "bg-orange-100 text-orange-800",
+    dot: "bg-orange-500",
+  },
+};
 
-function getWeekStart(date: Date): Date {
-  const d = new Date(date);
-  const day = d.getDay();
-  const diff = day === 0 ? -6 : 1 - day;
-  d.setDate(d.getDate() + diff);
-  d.setHours(0, 0, 0, 0);
-  return d;
+const MORNING_SLOTS = [7, 7.5, 8, 8.5, 9, 9.5, 10, 10.5, 11, 11.5];
+const AFTERNOON_SLOTS = [13, 13.5, 14, 14.5, 15, 15.5];
+
+function decimalToTimeStr(decimal: number): string {
+  const h = Math.floor(decimal);
+  const m = (decimal % 1) * 60;
+  return `${String(h).padStart(2, "0")}:${String(m).padStart(2, "0")}`;
 }
+
+// Get the Martinique date string "YYYY-MM-DD" for a given JS Date
+function toMQDateStr(date: Date): string {
+  const mq = new Date(date.getTime() - 4 * 60 * 60 * 1000);
+  return mq.toISOString().split("T")[0];
+}
+
+// Get the Martinique time as a decimal (e.g. 8.5 = 08:30) from a stored UTC dateHeure
+function getMQDecimalTime(dateHeure: string): number {
+  const d = new Date(dateHeure);
+  const mqH = ((d.getUTCHours() - 4) + 24) % 24;
+  const mqM = d.getUTCMinutes();
+  return mqH + mqM / 60;
+}
+
+const DAYS_FULL_FR = ["Dimanche", "Lundi", "Mardi", "Mercredi", "Jeudi", "Vendredi", "Samedi"];
+const MONTHS_FR = [
+  "janvier", "février", "mars", "avril", "mai", "juin",
+  "juillet", "août", "septembre", "octobre", "novembre", "décembre",
+];
 
 export default function PlanningPage() {
-  const [view, setView] = useState<"week" | "day">("week");
   const [currentDate, setCurrentDate] = useState(new Date());
   const [rdvs, setRdvs] = useState<Rdv[]>([]);
   const [loading, setLoading] = useState(true);
 
   const fetchRdvs = useCallback(async () => {
     setLoading(true);
-    const params = new URLSearchParams({
-      view,
-      date: currentDate.toISOString().split("T")[0],
-    });
-    const res = await fetch(`/api/admin/rdv?${params}`);
-    const data = await res.json();
-    setRdvs(data.rdvs || []);
-    setLoading(false);
-  }, [view, currentDate]);
+    const dateStr = toMQDateStr(currentDate);
+    try {
+      const res = await fetch(`/api/admin/rdv?view=day&date=${dateStr}`);
+      const data = await res.json();
+      setRdvs(data.rdvs || []);
+    } finally {
+      setLoading(false);
+    }
+  }, [currentDate]);
 
   useEffect(() => { fetchRdvs(); }, [fetchRdvs]);
 
-  const navigate = (direction: -1 | 1) => {
+  const navigate = (dir: -1 | 1) => {
     const d = new Date(currentDate);
-    if (view === "day") d.setDate(d.getDate() + direction);
-    else d.setDate(d.getDate() + direction * 7);
+    d.setDate(d.getDate() + dir);
     setCurrentDate(d);
   };
 
-  const getDateTitle = () => {
-    if (view === "day") {
-      return currentDate.toLocaleDateString("fr-FR", { weekday: "long", day: "numeric", month: "long", year: "numeric" });
-    }
-    const weekStart = getWeekStart(currentDate);
-    const weekEnd = new Date(weekStart);
-    weekEnd.setDate(weekEnd.getDate() + 6);
-    return `${weekStart.getDate()} — ${weekEnd.getDate()} ${MONTHS_FR[weekEnd.getMonth()]} ${weekEnd.getFullYear()}`;
-  };
+  const isToday = toMQDateStr(currentDate) === toMQDateStr(new Date());
 
-  // For week view, generate the 7 days of the week
-  const weekDays = Array.from({ length: 7 }, (_, i) => {
-    const d = getWeekStart(currentDate);
-    d.setDate(d.getDate() + i);
-    return d;
+  // Format display date in Martinique timezone
+  const mqDate = new Date(currentDate.getTime() - 4 * 60 * 60 * 1000);
+  const mqDayOfWeek = mqDate.getUTCDay();
+  const mqDay = mqDate.getUTCDate();
+  const mqMonth = MONTHS_FR[mqDate.getUTCMonth()];
+  const mqYear = mqDate.getUTCFullYear();
+  const isSunday = mqDayOfWeek === 0;
+
+  // Build decimal-time → RDV map
+  const slotMap = new Map<number, Rdv>();
+  rdvs.forEach((rdv) => {
+    slotMap.set(getMQDecimalTime(rdv.dateHeure), rdv);
   });
 
-  const getRdvsForDate = (date: Date) => {
-    const dateStr = date.toLocaleDateString("fr-FR");
-    return rdvs.filter((rdv) => {
-      const rdvDate = new Date(rdv.dateHeure);
-      return rdvDate.toLocaleDateString("fr-FR") === dateStr;
-    }).sort((a, b) => new Date(a.dateHeure).getTime() - new Date(b.dateHeure).getTime());
+  return (
+    <div className="space-y-4 animate-fadeIn">
+      <div>
+        <h1 className="text-xl sm:text-2xl font-bold text-gray-900">Planning</h1>
+        <p className="text-sm text-gray-500">
+          {loading ? "Chargement…" : `${rdvs.length} rendez-vous`}
+        </p>
+      </div>
+
+      {/* Navigation + legend */}
+      <div className="bg-white rounded-xl border border-gray-100 shadow-sm p-3 sm:p-4 space-y-3">
+        <div className="flex items-center justify-between gap-2 flex-wrap">
+          <div className="flex items-center gap-1">
+            <button
+              onClick={() => navigate(-1)}
+              className="w-10 h-10 flex items-center justify-center text-gray-500 hover:text-gray-900 hover:bg-gray-100 rounded-lg transition-colors"
+            >
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+              </svg>
+            </button>
+            <button
+              onClick={() => navigate(1)}
+              className="w-10 h-10 flex items-center justify-center text-gray-500 hover:text-gray-900 hover:bg-gray-100 rounded-lg transition-colors"
+            >
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+              </svg>
+            </button>
+            <h2 className="ml-1 text-base sm:text-lg font-semibold text-gray-900 capitalize">
+              {DAYS_FULL_FR[mqDayOfWeek]} {mqDay} {mqMonth} {mqYear}
+            </h2>
+          </div>
+          {!isToday && (
+            <button
+              onClick={() => setCurrentDate(new Date())}
+              className="px-3 py-1.5 text-sm text-navy-600 hover:text-navy-800 border border-navy-200 rounded-lg hover:bg-navy-50 transition-colors"
+            >
+              Aujourd&apos;hui
+            </button>
+          )}
+        </div>
+
+        {/* Legend */}
+        <div className="flex flex-wrap gap-2 pt-2 border-t border-gray-50">
+          {Object.entries(RDV_CONFIG).map(([type, cfg]) => (
+            <span key={type} className={`inline-flex items-center gap-1.5 text-xs px-2.5 py-1 rounded-full font-medium ${cfg.badge}`}>
+              <span className={`w-1.5 h-1.5 rounded-full ${cfg.dot}`} />
+              {cfg.label}
+            </span>
+          ))}
+        </div>
+      </div>
+
+      {/* Timeline */}
+      <div className="bg-white rounded-xl border border-gray-100 shadow-sm overflow-hidden">
+        {loading ? (
+          <div className="flex items-center justify-center py-16 text-gray-400 gap-2">
+            <svg className="animate-spin w-4 h-4" fill="none" viewBox="0 0 24 24">
+              <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+              <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+            </svg>
+            <span className="text-sm">Chargement…</span>
+          </div>
+        ) : isSunday ? (
+          <div className="flex items-center justify-center py-16">
+            <p className="text-sm text-gray-400">Fermé le dimanche</p>
+          </div>
+        ) : (
+          <>
+            {/* Morning */}
+            <SectionHeader label="Matin" hours="7h – 12h" />
+            {MORNING_SLOTS.map((decimal) => (
+              <SlotRow key={decimal} time={decimalToTimeStr(decimal)} rdv={slotMap.get(decimal)} />
+            ))}
+
+            {/* Lunch break */}
+            <div className="px-4 py-2.5 bg-gray-50 border-y border-gray-100 flex items-center gap-2">
+              <svg className="w-3.5 h-3.5 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+              <p className="text-xs text-gray-400 font-medium">Pause — 12h à 13h</p>
+            </div>
+
+            {/* Afternoon */}
+            <SectionHeader label="Après-midi" hours="13h – 16h" />
+            {AFTERNOON_SLOTS.map((decimal) => (
+              <SlotRow key={decimal} time={decimalToTimeStr(decimal)} rdv={slotMap.get(decimal)} />
+            ))}
+          </>
+        )}
+      </div>
+    </div>
+  );
+}
+
+function SectionHeader({ label, hours }: { label: string; hours: string }) {
+  return (
+    <div className="px-4 py-2 bg-gray-50 border-b border-gray-100 flex items-center justify-between">
+      <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide">{label}</p>
+      <p className="text-xs text-gray-400">{hours}</p>
+    </div>
+  );
+}
+
+function SlotRow({ time, rdv }: { time: string; rdv?: Rdv }) {
+  if (!rdv) {
+    return (
+      <div className="flex items-center gap-3 px-4 py-3 border-b border-gray-50 last:border-0">
+        <span className="text-xs font-mono text-gray-300 w-11 flex-shrink-0 tabular-nums">{time}</span>
+        <div className="flex-1 border-b border-dashed border-gray-100" />
+      </div>
+    );
+  }
+
+  const cfg = RDV_CONFIG[rdv.type] ?? {
+    label: rdv.type,
+    bg: "bg-gray-50/60",
+    border: "border-l-gray-300",
+    badge: "bg-gray-100 text-gray-700",
+    dot: "bg-gray-400",
   };
 
-  const today = new Date();
-  today.setHours(0, 0, 0, 0);
+  const ticket = rdv.client.tickets?.[0];
 
   return (
-    <div className="space-y-6 animate-fadeIn">
-      <div>
-        <h1 className="text-2xl font-bold text-gray-900">Planning</h1>
-        <p className="text-sm text-gray-500">Gestion des rendez-vous</p>
-      </div>
-
-      {/* Controls */}
-      <div className="bg-white rounded-xl border border-gray-100 shadow-sm p-4 flex items-center justify-between flex-wrap gap-3">
-        <div className="flex items-center gap-2">
-          <button
-            onClick={() => navigate(-1)}
-            className="p-2 text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-lg transition-colors"
-          >
-            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
-            </svg>
-          </button>
-          <h2 className="text-base font-semibold text-gray-900 capitalize min-w-48 text-center">
-            {getDateTitle()}
-          </h2>
-          <button
-            onClick={() => navigate(1)}
-            className="p-2 text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-lg transition-colors"
-          >
-            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7 7-7" />
-            </svg>
-          </button>
-          <button
-            onClick={() => setCurrentDate(new Date())}
-            className="ml-2 px-3 py-1.5 text-sm text-navy-600 hover:text-navy-800 border border-navy-200 rounded-lg hover:bg-navy-50 transition-colors"
-          >
-            Aujourd&apos;hui
-          </button>
-        </div>
-        <div className="flex items-center gap-1 bg-gray-100 rounded-lg p-1">
-          <button
-            onClick={() => setView("week")}
-            className={`px-3 py-1.5 text-sm font-medium rounded-md transition-colors ${
-              view === "week" ? "bg-white text-gray-900 shadow-sm" : "text-gray-500 hover:text-gray-700"
-            }`}
-          >
-            Semaine
-          </button>
-          <button
-            onClick={() => setView("day")}
-            className={`px-3 py-1.5 text-sm font-medium rounded-md transition-colors ${
-              view === "day" ? "bg-white text-gray-900 shadow-sm" : "text-gray-500 hover:text-gray-700"
-            }`}
-          >
-            Jour
-          </button>
-        </div>
-      </div>
-
-      {/* Legend */}
-      <div className="flex flex-wrap gap-3">
-        {Object.entries(RDV_TYPE_LABELS).map(([type, label]) => (
-          <span key={type} className={`text-xs px-3 py-1 rounded-full font-medium border ${RDV_TYPE_COLORS[type]}`}>
-            {label}
-          </span>
-        ))}
-      </div>
-
-      {loading ? (
-        <div className="flex items-center justify-center py-20 text-gray-400">
-          <svg className="animate-spin w-5 h-5 mr-2" fill="none" viewBox="0 0 24 24">
-            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"/>
-            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/>
-          </svg>
-          Chargement...
-        </div>
-      ) : view === "week" ? (
-        /* Week view */
-        <div className="bg-white rounded-xl border border-gray-100 shadow-sm overflow-hidden">
-          <div className="grid grid-cols-7 border-b border-gray-100">
-            {weekDays.map((day, i) => {
-              const isToday = day.getTime() === today.getTime();
-              return (
-                <div
-                  key={i}
-                  className={`px-3 py-3 text-center border-r last:border-r-0 border-gray-100 ${isToday ? "bg-navy-50" : ""}`}
-                >
-                  <p className={`text-xs font-medium ${isToday ? "text-navy-600" : "text-gray-400"}`}>
-                    {DAYS_FR[i]}
-                  </p>
-                  <p className={`text-lg font-bold mt-0.5 ${isToday ? "text-navy-700" : "text-gray-800"}`}>
-                    {day.getDate()}
-                  </p>
-                </div>
-              );
-            })}
-          </div>
-          <div className="grid grid-cols-7 min-h-64">
-            {weekDays.map((day, i) => {
-              const dayRdvs = getRdvsForDate(day);
-              const isToday = day.getTime() === today.getTime();
-              return (
-                <div
-                  key={i}
-                  className={`p-2 border-r last:border-r-0 border-gray-100 space-y-1.5 ${isToday ? "bg-navy-50/30" : ""}`}
-                >
-                  {dayRdvs.map((rdv) => (
-                    <div
-                      key={rdv.id}
-                      className={`text-xs rounded-lg p-2 border ${RDV_TYPE_COLORS[rdv.type] || "bg-gray-100 text-gray-700 border-gray-200"}`}
-                    >
-                      <p className="font-semibold">{formatTime(rdv.dateHeure)}</p>
-                      <p className="truncate mt-0.5">{rdv.client.prenom} {rdv.client.nom}</p>
-                      <p className="text-xs opacity-75">{RDV_TYPE_LABELS[rdv.type] || rdv.type}</p>
-                    </div>
-                  ))}
-                  {dayRdvs.length === 0 && (
-                    <p className="text-xs text-gray-300 text-center pt-4">—</p>
-                  )}
-                </div>
-              );
-            })}
-          </div>
-        </div>
-      ) : (
-        /* Day view */
-        <div className="bg-white rounded-xl border border-gray-100 shadow-sm">
-          <div className="px-6 py-4 border-b border-gray-100">
-            <p className="font-semibold text-gray-900 capitalize">
-              {currentDate.toLocaleDateString("fr-FR", { weekday: "long", day: "numeric", month: "long" })}
-            </p>
-          </div>
-          <div className="divide-y divide-gray-50">
-            {getRdvsForDate(currentDate).length === 0 ? (
-              <p className="px-6 py-12 text-center text-gray-400 text-sm">Aucun rendez-vous ce jour</p>
-            ) : (
-              getRdvsForDate(currentDate).map((rdv) => (
-                <div key={rdv.id} className="flex items-start gap-4 px-6 py-4">
-                  <div className="flex-shrink-0 w-16 text-center">
-                    <p className="text-xl font-bold text-navy-700">{formatTime(rdv.dateHeure)}</p>
-                  </div>
-                  <div className="flex-1">
-                    <div className="flex items-center gap-2 flex-wrap">
-                      <p className="text-sm font-semibold text-gray-900">
-                        {rdv.client.prenom} {rdv.client.nom}
-                      </p>
-                      <span className={`text-xs px-2.5 py-0.5 rounded-full font-medium border ${RDV_TYPE_COLORS[rdv.type] || "bg-gray-100 text-gray-600 border-gray-200"}`}>
-                        {RDV_TYPE_LABELS[rdv.type] || rdv.type}
-                      </span>
-                    </div>
-                    {rdv.client.telephone && (
-                      <p className="text-xs text-gray-400 mt-0.5">{rdv.client.telephone}</p>
-                    )}
-                    {rdv.notes && (
-                      <p className="text-sm text-gray-500 mt-1 bg-gray-50 rounded px-2 py-1">{rdv.notes}</p>
-                    )}
-                  </div>
-                </div>
-              ))
+    <div className={`flex items-start gap-3 px-4 py-2.5 border-b border-gray-50 last:border-0 ${cfg.bg}`}>
+      <span className="text-sm font-mono font-semibold text-gray-700 w-11 flex-shrink-0 tabular-nums mt-1">{time}</span>
+      <div className={`flex-1 rounded-lg border border-gray-100 border-l-4 ${cfg.border} bg-white shadow-sm px-3 py-2.5 min-w-0`}>
+        {/* Client + type */}
+        <div className="flex items-start gap-2 justify-between flex-wrap">
+          <div className="min-w-0">
+            <div className="flex items-center gap-2 flex-wrap">
+              <p className="font-semibold text-gray-900 text-sm leading-tight">
+                {rdv.client.prenom} {rdv.client.nom}
+              </p>
+              <span className={`text-xs px-2 py-0.5 rounded-full font-medium flex-shrink-0 ${cfg.badge}`}>
+                {cfg.label}
+              </span>
+            </div>
+            {rdv.client.telephone && (
+              <a
+                href={`tel:${rdv.client.telephone}`}
+                className="text-xs text-gray-400 hover:text-navy-600 transition-colors mt-0.5 inline-block"
+              >
+                {rdv.client.telephone}
+              </a>
             )}
           </div>
         </div>
-      )}
+
+        {/* Latest ticket */}
+        {ticket && (
+          <div className="mt-1.5 flex items-center gap-2 flex-wrap">
+            <span className="text-xs font-mono font-semibold text-navy-700 bg-navy-50 px-1.5 py-0.5 rounded">
+              {ticket.numero}
+            </span>
+            <span className="text-xs text-gray-500 truncate">
+              {ticket.marque} {ticket.modele} — {ticket.materiel}
+            </span>
+          </div>
+        )}
+
+        {/* Notes */}
+        {rdv.notes && (
+          <p className="text-xs text-gray-400 mt-1.5 italic leading-relaxed">{rdv.notes}</p>
+        )}
+      </div>
     </div>
   );
 }
