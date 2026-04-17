@@ -1,6 +1,6 @@
 import { redirect } from "next/navigation";
 import { getAdminSession } from "@/lib/auth";
-import { Sidebar } from "@/components/admin/Sidebar";
+import { AdminShell } from "@/components/admin/AdminShell";
 
 export default async function AdminProtectedLayout({
   children,
@@ -13,13 +13,8 @@ export default async function AdminProtectedLayout({
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      <Sidebar userName={session.user.nom} userRole={session.user.role} />
-      <div className="pl-64">
-        <main className="p-8 min-h-screen">
-          {children}
-        </main>
-      </div>
-    </div>
+    <AdminShell userName={session.user.nom} userRole={session.user.role}>
+      {children}
+    </AdminShell>
   );
 }

@@ -46,9 +46,11 @@ const navigation = [
 interface SidebarProps {
   userName?: string;
   userRole?: string;
+  isOpen?: boolean;
+  onClose?: () => void;
 }
 
-export function Sidebar({ userName, userRole }: SidebarProps) {
+export function Sidebar({ userName, userRole, isOpen = false, onClose }: SidebarProps) {
   const pathname = usePathname();
   const router = useRouter();
   const [loggingOut, setLoggingOut] = useState(false);
@@ -68,68 +70,102 @@ export function Sidebar({ userName, userRole }: SidebarProps) {
     return pathname.startsWith(href);
   };
 
+  const handleNavClick = () => {
+    onClose?.();
+  };
+
   return (
-    <aside className="fixed inset-y-0 left-0 w-64 bg-navy-700 flex flex-col z-30">
-      {/* Logo */}
-      <div className="px-6 py-5 border-b border-navy-600">
-        <div className="flex items-center gap-3">
-          <div className="w-9 h-9 bg-white rounded-lg flex items-center justify-center flex-shrink-0">
-            <svg className="w-5 h-5 text-navy-700" fill="currentColor" viewBox="0 0 24 24">
-              <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 14.5v-9l6 4.5-6 4.5z"/>
-            </svg>
-          </div>
-          <div>
-            <p className="text-white font-semibold text-sm leading-tight">Les Hauts de</p>
-            <p className="text-white font-semibold text-sm leading-tight">Californie</p>
-            <p className="text-navy-300 text-xs">SAV JardiPro</p>
-          </div>
-        </div>
-      </div>
+    <>
+      {/* Mobile overlay */}
+      {isOpen && (
+        <div
+          className="fixed inset-0 bg-black/50 z-40 md:hidden"
+          onClick={onClose}
+          aria-hidden="true"
+        />
+      )}
 
-      {/* Navigation */}
-      <nav className="flex-1 px-3 py-4 space-y-1 overflow-y-auto">
-        {navigation.map((item) => (
-          <Link
-            key={item.name}
-            href={item.href}
-            className={`flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all duration-150 group
-              ${isActive(item.href)
-                ? "bg-white/10 text-white"
-                : "text-navy-200 hover:bg-white/5 hover:text-white"
-              }`}
+      {/* Sidebar panel */}
+      <aside
+        className={`
+          fixed inset-y-0 left-0 w-64 bg-navy-700 flex flex-col z-50
+          transition-transform duration-300 ease-in-out
+          ${isOpen ? "translate-x-0" : "-translate-x-full"}
+          md:translate-x-0
+        `}
+      >
+        {/* Logo */}
+        <div className="px-6 py-5 border-b border-navy-600 flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <div className="w-9 h-9 bg-white rounded-lg flex items-center justify-center flex-shrink-0">
+              <svg className="w-5 h-5 text-navy-700" fill="currentColor" viewBox="0 0 24 24">
+                <path d="M17.66 7.93L12 2.27 6.34 7.93c-3.12 3.12-3.12 8.19 0 11.31C7.9 20.8 9.95 21.58 12 21.58c2.05 0 4.1-.78 5.66-2.34 3.12-3.12 3.12-8.19 0-11.31zM12 19.59c-1.6 0-3.11-.62-4.24-1.76C6.62 16.69 6 15.19 6 13.59s.62-3.11 1.76-4.24L12 5.1v14.49z"/>
+              </svg>
+            </div>
+            <div>
+              <p className="text-white font-semibold text-sm leading-tight">Les Hauts de</p>
+              <p className="text-white font-semibold text-sm leading-tight">Californie</p>
+              <p className="text-navy-300 text-xs">SAV JardiPro</p>
+            </div>
+          </div>
+          {/* Close button — mobile only */}
+          <button
+            onClick={onClose}
+            className="md:hidden p-1.5 text-navy-300 hover:text-white hover:bg-white/10 rounded-lg transition-colors"
+            aria-label="Fermer le menu"
           >
-            <span className={`transition-colors ${isActive(item.href) ? "text-white" : "text-navy-300 group-hover:text-white"}`}>
-              {item.icon}
-            </span>
-            {item.name}
-          </Link>
-        ))}
-      </nav>
-
-      {/* User section */}
-      <div className="px-3 py-4 border-t border-navy-600">
-        <div className="flex items-center gap-3 px-3 py-2 mb-2">
-          <div className="w-8 h-8 rounded-full bg-navy-600 flex items-center justify-center flex-shrink-0">
-            <span className="text-white text-xs font-semibold">
-              {userName?.charAt(0).toUpperCase() || "A"}
-            </span>
-          </div>
-          <div className="min-w-0">
-            <p className="text-white text-sm font-medium truncate">{userName || "Admin"}</p>
-            <p className="text-navy-300 text-xs">{userRole === "ADMIN" ? "Administrateur" : "Technicien"}</p>
-          </div>
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+            </svg>
+          </button>
         </div>
-        <button
-          onClick={handleLogout}
-          disabled={loggingOut}
-          className="flex items-center gap-2 w-full px-3 py-2 text-navy-200 hover:text-white hover:bg-white/5 rounded-lg text-sm transition-all"
-        >
-          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
-          </svg>
-          {loggingOut ? "Déconnexion..." : "Se déconnecter"}
-        </button>
-      </div>
-    </aside>
+
+        {/* Navigation */}
+        <nav className="flex-1 px-3 py-4 space-y-1 overflow-y-auto">
+          {navigation.map((item) => (
+            <Link
+              key={item.name}
+              href={item.href}
+              onClick={handleNavClick}
+              className={`flex items-center gap-3 px-3 py-3 rounded-lg text-sm font-medium transition-all duration-150 group
+                ${isActive(item.href)
+                  ? "bg-white/10 text-white"
+                  : "text-navy-200 hover:bg-white/5 hover:text-white"
+                }`}
+            >
+              <span className={`transition-colors ${isActive(item.href) ? "text-white" : "text-navy-300 group-hover:text-white"}`}>
+                {item.icon}
+              </span>
+              {item.name}
+            </Link>
+          ))}
+        </nav>
+
+        {/* User section */}
+        <div className="px-3 py-4 border-t border-navy-600">
+          <div className="flex items-center gap-3 px-3 py-2 mb-2">
+            <div className="w-8 h-8 rounded-full bg-navy-600 flex items-center justify-center flex-shrink-0">
+              <span className="text-white text-xs font-semibold">
+                {userName?.charAt(0).toUpperCase() || "A"}
+              </span>
+            </div>
+            <div className="min-w-0">
+              <p className="text-white text-sm font-medium truncate">{userName || "Admin"}</p>
+              <p className="text-navy-300 text-xs">{userRole === "ADMIN" ? "Administrateur" : "Technicien"}</p>
+            </div>
+          </div>
+          <button
+            onClick={handleLogout}
+            disabled={loggingOut}
+            className="flex items-center gap-2 w-full px-3 py-2.5 text-navy-200 hover:text-white hover:bg-white/5 rounded-lg text-sm transition-all"
+          >
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
+            </svg>
+            {loggingOut ? "Déconnexion..." : "Se déconnecter"}
+          </button>
+        </div>
+      </aside>
+    </>
   );
 }

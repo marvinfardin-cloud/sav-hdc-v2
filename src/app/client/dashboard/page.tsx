@@ -116,16 +116,17 @@ export default function ClientDashboard() {
         <div className="flex items-center gap-3">
           <button
             onClick={() => setShowModal(true)}
-            className="flex items-center gap-2 bg-green-600 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-green-700 transition-colors shadow-sm"
+            className="flex items-center gap-2 bg-green-600 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-green-700 transition-colors shadow-sm min-h-[44px]"
           >
             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
             </svg>
-            Soumettre une demande
+            <span className="hidden sm:inline">Soumettre une demande</span>
+            <span className="sm:hidden">Demande</span>
           </button>
           <Link
             href="/client/rdv"
-            className="flex items-center gap-2 bg-navy-700 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-navy-800 transition-colors shadow-sm"
+            className="flex items-center gap-2 bg-navy-700 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-navy-800 transition-colors shadow-sm min-h-[44px]"
           >
             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
@@ -165,7 +166,7 @@ export default function ClientDashboard() {
             >
               {/* Card header */}
               <div
-                className="flex items-center gap-4 px-6 py-4 cursor-pointer hover:bg-gray-50/50 transition-colors"
+                className="flex items-center gap-3 px-4 sm:px-6 py-4 cursor-pointer hover:bg-gray-50/50 transition-colors min-h-[64px]"
                 onClick={() => setExpandedId(expandedId === ticket.id ? null : ticket.id)}
               >
                 <div className="flex-1 min-w-0">
@@ -208,7 +209,7 @@ export default function ClientDashboard() {
 
               {/* Expanded content */}
               {expandedId === ticket.id && (
-                <div className="border-t border-gray-100 px-6 py-4">
+                <div className="border-t border-gray-100 px-4 sm:px-6 py-4">
                   {ticket.notesPubliques && (
                     <div className="mb-4 p-3 bg-blue-50 border border-blue-100 rounded-lg text-sm text-blue-800">
                       <p className="font-medium mb-0.5">Message de l&apos;atelier</p>
@@ -225,13 +226,13 @@ export default function ClientDashboard() {
 
       {/* New ticket modal */}
       {showModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50">
-          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-lg max-h-[90vh] overflow-y-auto">
+        <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center sm:p-4 bg-black/50">
+          <div className="bg-white rounded-t-2xl sm:rounded-2xl shadow-2xl w-full sm:max-w-lg max-h-[90vh] overflow-y-auto">
             <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100">
               <h2 className="text-lg font-semibold text-gray-900">Soumettre une demande de réparation</h2>
               <button
                 onClick={() => { setShowModal(false); setSubmitError(""); }}
-                className="text-gray-400 hover:text-gray-600 transition-colors"
+                className="text-gray-400 hover:text-gray-600 transition-colors p-1 min-w-[44px] min-h-[44px] flex items-center justify-center"
               >
                 <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
@@ -325,14 +326,14 @@ export default function ClientDashboard() {
                 <button
                   type="button"
                   onClick={() => { setShowModal(false); setSubmitError(""); }}
-                  className="flex-1 px-4 py-2.5 border border-gray-300 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors"
+                  className="flex-1 px-4 py-3 border border-gray-300 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors min-h-[44px]"
                 >
                   Annuler
                 </button>
                 <button
                   type="submit"
                   disabled={submitting}
-                  className="flex-1 bg-green-600 text-white px-4 py-2.5 rounded-lg text-sm font-medium hover:bg-green-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                  className="flex-1 bg-green-600 text-white px-4 py-3 rounded-lg text-sm font-medium hover:bg-green-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 min-h-[44px]"
                 >
                   {submitting ? (
                     <>

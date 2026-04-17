@@ -1,13 +1,15 @@
+import Link from "next/link";
+
 interface StatsCardProps {
   title: string;
   value: number | string;
   subtitle?: string;
   icon: React.ReactNode;
   color?: "blue" | "green" | "orange" | "purple" | "navy";
-  trend?: { value: number; label: string };
+  href?: string;
 }
 
-export function StatsCard({ title, value, subtitle, icon, color = "navy" }: StatsCardProps) {
+export function StatsCard({ title, value, subtitle, icon, color = "navy", href }: StatsCardProps) {
   const colors = {
     navy: { bg: "bg-navy-50", icon: "bg-navy-100 text-navy-700", text: "text-navy-700" },
     blue: { bg: "bg-blue-50", icon: "bg-blue-100 text-blue-700", text: "text-blue-700" },
@@ -18,8 +20,8 @@ export function StatsCard({ title, value, subtitle, icon, color = "navy" }: Stat
 
   const c = colors[color];
 
-  return (
-    <div className={`bg-white rounded-xl border border-gray-100 shadow-sm p-6`}>
+  const inner = (
+    <div className={`bg-white rounded-xl border border-gray-100 shadow-sm p-6 ${href ? "hover:shadow-md hover:border-gray-200 transition-all cursor-pointer" : ""}`}>
       <div className="flex items-start justify-between">
         <div>
           <p className="text-sm text-gray-500 font-medium">{title}</p>
@@ -34,4 +36,7 @@ export function StatsCard({ title, value, subtitle, icon, color = "navy" }: Stat
       </div>
     </div>
   );
+
+  if (href) return <Link href={href}>{inner}</Link>;
+  return inner;
 }

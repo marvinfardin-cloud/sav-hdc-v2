@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback } from "react";
 import Link from "next/link";
-import { useSearchParams, useRouter } from "next/navigation";
+import { useSearchParams } from "next/navigation";
 import { StatusBadge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
 import { Input, Select, Textarea } from "@/components/ui/Input";
@@ -41,7 +41,6 @@ const STATUT_LABELS: Record<string, string> = {
 
 export default function TicketsPage() {
   const searchParams = useSearchParams();
-  const router = useRouter();
   const [tickets, setTickets] = useState<Ticket[]>([]);
   const [clients, setClients] = useState<Client[]>([]);
   const [loading, setLoading] = useState(true);
@@ -71,55 +70,105 @@ export default function TicketsPage() {
   }, []);
 
   return (
-    <div className="space-y-6 animate-fadeIn">
-      <div className="flex items-center justify-between">
+    <div className="space-y-4 sm:space-y-6 animate-fadeIn">
+      <div className="flex items-center justify-between gap-3">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">Tickets SAV</h1>
+          <h1 className="text-xl sm:text-2xl font-bold text-gray-900">Tickets SAV</h1>
           <p className="text-sm text-gray-500">{tickets.length} ticket{tickets.length !== 1 ? "s" : ""}</p>
         </div>
-        <Button onClick={() => setShowCreateModal(true)}>
+        <Button onClick={() => setShowCreateModal(true)} size="sm">
           <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
           </svg>
-          Nouveau ticket
+          <span className="hidden sm:inline">Nouveau ticket</span>
+          <span className="sm:hidden">Nouveau</span>
         </Button>
       </div>
 
       {/* Filters */}
-      <div className="bg-white rounded-xl border border-gray-100 shadow-sm p-4">
-        <div className="flex flex-wrap gap-3">
-          <div className="flex-1 min-w-48">
+      <div className="bg-white rounded-xl border border-gray-100 shadow-sm p-3 sm:p-4">
+        <div className="flex flex-col sm:flex-row gap-3">
+          <div className="flex-1">
             <input
               type="text"
               placeholder="Rechercher par numéro, client, matériel..."
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-navy-500 focus:border-navy-500"
+              className="w-full px-3 py-2.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-navy-500 focus:border-navy-500 min-h-[44px]"
             />
           </div>
-          <select
-            value={statusFilter}
-            onChange={(e) => setStatusFilter(e.target.value)}
-            className="px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-navy-500 bg-white"
-          >
-            <option value="">Tous les statuts</option>
-            {STATUTS.map((s) => (
-              <option key={s} value={s}>{STATUT_LABELS[s]}</option>
-            ))}
-          </select>
-          {(search || statusFilter) && (
-            <button
-              onClick={() => { setSearch(""); setStatusFilter(""); }}
-              className="px-3 py-2 text-sm text-gray-500 hover:text-gray-700 border border-gray-300 rounded-lg hover:bg-gray-50"
+          <div className="flex gap-2">
+            <select
+              value={statusFilter}
+              onChange={(e) => setStatusFilter(e.target.value)}
+              className="flex-1 sm:flex-none px-3 py-2.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-navy-500 bg-white min-h-[44px]"
             >
-              Effacer
-            </button>
-          )}
+              <option value="">Tous les statuts</option>
+              {STATUTS.map((s) => (
+                <option key={s} value={s}>{STATUT_LABELS[s]}</option>
+              ))}
+            </select>
+            {(search || statusFilter) && (
+              <button
+                onClick={() => { setSearch(""); setStatusFilter(""); }}
+                className="px-3 py-2 text-sm text-gray-500 hover:text-gray-700 border border-gray-300 rounded-lg hover:bg-gray-50 min-h-[44px] whitespace-nowrap"
+              >
+                Effacer
+              </button>
+            )}
+          </div>
         </div>
       </div>
 
-      {/* Tickets table */}
-      <div className="bg-white rounded-xl border border-gray-100 shadow-sm overflow-hidden">
+      {/* Mobile: card list */}
+      <div className="md:hidden space-y-2">
+        {loading ? (
+          <div className="bg-white rounded-xl border border-gray-100 shadow-sm p-8 text-center text-gray-400">
+            <svg className="animate-spin w-5 h-5 mx-auto mb-2" fill="none" viewBox="0 0 24 24">
+              <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"/>
+              <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/>
+            </svg>
+            Chargement...
+          </div>
+        ) : tickets.length === 0 ? (
+          <div className="bg-white rounded-xl border border-gray-100 shadow-sm p-8 text-center text-gray-400 text-sm">
+            Aucun ticket trouvé
+          </div>
+        ) : (
+          tickets.map((ticket) => (
+            <Link
+              key={ticket.id}
+              href={`/admin/tickets/${ticket.id}`}
+              className="block bg-white rounded-xl border border-gray-100 shadow-sm p-4 hover:shadow-md transition-shadow active:bg-gray-50"
+            >
+              <div className="flex items-start justify-between gap-2">
+                <div className="min-w-0 flex-1">
+                  <div className="flex items-center gap-2 flex-wrap mb-1">
+                    <span className="font-mono font-bold text-navy-700 text-sm">{ticket.numero}</span>
+                    <StatusBadge statut={ticket.statut} size="sm" />
+                  </div>
+                  <p className="text-sm font-medium text-gray-900">
+                    {ticket.client.prenom} {ticket.client.nom}
+                  </p>
+                  <p className="text-xs text-gray-500 mt-0.5">
+                    {ticket.marque} {ticket.modele} — {ticket.materiel}
+                  </p>
+                  <p className="text-xs text-gray-400 mt-1">
+                    {formatDate(ticket.createdAt)}
+                    {ticket.technicien && ` · ${ticket.technicien.nom}`}
+                  </p>
+                </div>
+                <svg className="w-4 h-4 text-gray-300 flex-shrink-0 mt-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                </svg>
+              </div>
+            </Link>
+          ))
+        )}
+      </div>
+
+      {/* Desktop: table */}
+      <div className="hidden md:block bg-white rounded-xl border border-gray-100 shadow-sm overflow-hidden">
         <div className="overflow-x-auto">
           <table className="w-full">
             <thead>
@@ -189,7 +238,6 @@ export default function TicketsPage() {
         </div>
       </div>
 
-      {/* Create ticket modal */}
       {showCreateModal && (
         <CreateTicketModal
           clients={clients}
@@ -228,7 +276,6 @@ function CreateTicketModal({
     e.preventDefault();
     setError("");
     setLoading(true);
-
     try {
       const res = await fetch("/api/admin/tickets", {
         method: "POST",
@@ -249,17 +296,17 @@ function CreateTicketModal({
   };
 
   return (
-    <div className="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-2xl max-h-[90vh] overflow-y-auto">
-        <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100">
+    <div className="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-end sm:items-center justify-center z-50 p-0 sm:p-4">
+      <div className="bg-white rounded-t-2xl sm:rounded-2xl shadow-2xl w-full sm:max-w-2xl max-h-[92vh] overflow-y-auto">
+        <div className="flex items-center justify-between px-4 sm:px-6 py-4 border-b border-gray-100 sticky top-0 bg-white">
           <h2 className="text-lg font-semibold text-gray-900">Nouveau ticket SAV</h2>
-          <button onClick={onClose} className="text-gray-400 hover:text-gray-600 transition-colors">
+          <button onClick={onClose} className="text-gray-400 hover:text-gray-600 p-1 min-w-[44px] min-h-[44px] flex items-center justify-center">
             <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
             </svg>
           </button>
         </div>
-        <form onSubmit={handleSubmit} className="p-6 space-y-4">
+        <form onSubmit={handleSubmit} className="p-4 sm:p-6 space-y-4">
           {error && (
             <div className="p-3 bg-red-50 border border-red-200 rounded-lg text-sm text-red-700">{error}</div>
           )}
@@ -278,7 +325,7 @@ function CreateTicketModal({
             ))}
           </Select>
 
-          <div className="grid grid-cols-3 gap-3">
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
             <Input
               label="Matériel"
               placeholder="Tondeuse, débroussailleuse..."
@@ -302,7 +349,7 @@ function CreateTicketModal({
             />
           </div>
 
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <Input
               label="N° de série"
               placeholder="Optionnel"
@@ -342,11 +389,11 @@ function CreateTicketModal({
             rows={2}
           />
 
-          <div className="flex gap-3 pt-2">
-            <Button type="button" variant="outline" onClick={onClose} className="flex-1">
+          <div className="flex gap-3 pt-2 pb-2">
+            <Button type="button" variant="outline" onClick={onClose} className="flex-1 min-h-[44px]">
               Annuler
             </Button>
-            <Button type="submit" loading={loading} className="flex-1">
+            <Button type="submit" loading={loading} className="flex-1 min-h-[44px]">
               Créer le ticket
             </Button>
           </div>

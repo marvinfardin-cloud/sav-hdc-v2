@@ -76,7 +76,7 @@ export default function TicketDetailPage() {
   }
 
   return (
-    <div className="space-y-6 animate-fadeIn max-w-6xl">
+    <div className="space-y-4 sm:space-y-6 animate-fadeIn max-w-6xl">
       {/* Breadcrumb & header */}
       <div>
         <Link href="/admin/tickets" className="text-sm text-gray-500 hover:text-gray-700 flex items-center gap-1 mb-3">
@@ -85,10 +85,10 @@ export default function TicketDetailPage() {
           </svg>
           Tickets
         </Link>
-        <div className="flex items-start justify-between flex-wrap gap-4">
+        <div className="flex items-start justify-between flex-wrap gap-3">
           <div>
             <div className="flex items-center gap-3 flex-wrap">
-              <h1 className="text-2xl font-bold text-gray-900 font-mono">{ticket.numero}</h1>
+              <h1 className="text-xl sm:text-2xl font-bold text-gray-900 font-mono">{ticket.numero}</h1>
               <StatusBadge statut={ticket.statut} />
             </div>
             <p className="text-gray-500 text-sm mt-1">
@@ -119,17 +119,17 @@ export default function TicketDetailPage() {
               </Button>
             )}
             <Button size="sm" onClick={() => setActiveModal("status")}>
-              Mettre à jour le statut
+              Mettre à jour
             </Button>
           </div>
         </div>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 sm:gap-6">
         {/* Main info */}
-        <div className="lg:col-span-2 space-y-6">
+        <div className="lg:col-span-2 space-y-4 sm:space-y-6">
           {/* Ticket info */}
-          <div className="bg-white rounded-xl border border-gray-100 shadow-sm p-6">
+          <div className="bg-white rounded-xl border border-gray-100 shadow-sm p-4 sm:p-6">
             <h2 className="font-semibold text-gray-900 mb-4">Informations du ticket</h2>
             <div className="grid grid-cols-2 gap-4 text-sm">
               <div>

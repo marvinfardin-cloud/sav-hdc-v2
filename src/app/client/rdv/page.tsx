@@ -133,7 +133,8 @@ export default function RdvPage() {
     <div className="space-y-6 animate-fadeIn">
       <div>
         <h1 className="text-2xl font-bold text-gray-900">Prendre un rendez-vous</h1>
-        <p className="text-gray-500 text-sm">SAV Les Hauts de Californie — Horaires: 7h-12h et 13h-16h00</p>
+        <p className="text-gray-500 text-sm hidden sm:block">SAV Les Hauts de Californie — Horaires: 7h-12h et 13h-16h00</p>
+        <p className="text-gray-500 text-xs sm:hidden">Horaires: 7h-12h et 13h-16h00</p>
       </div>
 
       {/* Progress steps */}
@@ -166,7 +167,7 @@ export default function RdvPage() {
               <button
                 key={type.value}
                 onClick={() => { setSelectedType(type.value); setStep(2); }}
-                className={`w-full flex items-center gap-4 p-4 rounded-xl border-2 text-left transition-all hover:border-navy-300 hover:bg-navy-50/30 ${
+                className={`w-full flex items-center gap-4 p-4 rounded-xl border-2 text-left transition-all hover:border-navy-300 hover:bg-navy-50/30 active:bg-navy-50 min-h-[64px] ${
                   selectedType === type.value ? "border-navy-700 bg-navy-50" : "border-gray-100"
                 }`}
               >
@@ -224,17 +225,17 @@ export default function RdvPage() {
               ) : slots.length === 0 ? (
                 <p className="text-sm text-gray-500">Aucun créneau disponible ce jour.</p>
               ) : (
-                <div className="grid grid-cols-4 sm:grid-cols-6 gap-2">
+                <div className="grid grid-cols-4 sm:grid-cols-5 md:grid-cols-6 gap-2">
                   {slots.map((slot) => (
                     <button
                       key={slot.time}
                       onClick={() => slot.available && setSelectedTime(slot.time)}
                       disabled={!slot.available}
-                      className={`py-2 px-3 rounded-lg text-sm font-medium border transition-all ${
+                      className={`py-2.5 px-2 rounded-lg text-sm font-medium border transition-all min-h-[44px] ${
                         selectedTime === slot.time
                           ? "bg-navy-700 text-white border-navy-700"
                           : slot.available
-                          ? "border-gray-200 text-gray-700 hover:border-navy-300 hover:bg-navy-50"
+                          ? "border-gray-200 text-gray-700 hover:border-navy-300 hover:bg-navy-50 active:bg-navy-100"
                           : "border-gray-100 text-gray-300 cursor-not-allowed bg-gray-50 line-through"
                       }`}
                     >
