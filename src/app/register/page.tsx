@@ -65,16 +65,15 @@ export default function RegisterPage() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-navy-900 via-navy-700 to-navy-800 flex items-center justify-center p-4">
+    <div className="min-h-screen flex items-center justify-center p-4" style={{ backgroundColor: "#F47920" }}>
       <div className="w-full max-w-md">
         <div className="text-center mb-8">
           <div className="inline-flex items-center justify-center w-16 h-16 bg-white rounded-2xl shadow-lg mb-4">
-            <svg className="w-8 h-8 text-navy-700" fill="currentColor" viewBox="0 0 24 24">
-              <path d="M17.66 7.93L12 2.27 6.34 7.93c-3.12 3.12-3.12 8.19 0 11.31C7.9 20.8 9.95 21.58 12 21.58c2.05 0 4.1-.78 5.66-2.34 3.12-3.12 3.12-8.19 0-11.31zM12 19.59c-1.6 0-3.11-.62-4.24-1.76C6.62 16.69 6 15.19 6 13.59s.62-3.11 1.76-4.24L12 5.1v14.49z"/>
-            </svg>
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src="/logo.png" className="w-12 h-12 object-contain" alt="JardiPro" />
           </div>
           <h1 className="text-2xl font-bold text-white">Les Hauts de Californie</h1>
-          <p className="text-navy-300 text-sm mt-1">Espace Client SAV JardiPro</p>
+          <p className="text-white/80 text-sm mt-1">Espace Client SAV JardiPro</p>
         </div>
 
         <div className="bg-white rounded-2xl shadow-2xl p-8">
@@ -168,7 +167,7 @@ export default function RegisterPage() {
             <button
               type="submit"
               disabled={loading}
-              className="w-full bg-navy-700 text-white py-3 px-4 rounded-lg font-medium text-base hover:bg-navy-800 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 min-h-[44px]"
+              className="w-full text-white py-3 px-4 rounded-lg font-medium text-base transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 min-h-[44px]" style={{ backgroundColor: "#F47920" }}
             >
               {loading ? (
                 <>
@@ -186,13 +185,13 @@ export default function RegisterPage() {
 
           <p className="text-center text-sm text-gray-500 mt-6">
             Déjà un compte ?{" "}
-            <Link href="/login" className="text-navy-700 font-medium hover:underline">
+            <Link href="/login" className="font-medium hover:underline" style={{ color: "#F47920" }}>
               Se connecter
             </Link>
           </p>
         </div>
 
-        <p className="text-center text-navy-400 text-xs mt-6">
+        <p className="text-center text-white/60 text-xs mt-6">
           Accès client — Espace de suivi SAV
         </p>
       </div>
