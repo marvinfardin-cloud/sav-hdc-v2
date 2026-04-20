@@ -111,30 +111,31 @@ export function Sidebar({ userName, userRole, isOpen = false, onClose }: Sidebar
       {/* Sidebar panel */}
       <aside
         className={`
-          fixed inset-y-0 left-0 w-64 bg-navy-700 flex flex-col z-50
+          fixed inset-y-0 left-0 w-64 flex flex-col z-50
           transition-transform duration-300 ease-in-out
           ${isOpen ? "translate-x-0" : "-translate-x-full"}
           md:translate-x-0
         `}
+        style={{ backgroundColor: "#F47920" }}
       >
         {/* Logo */}
-        <div className="px-6 py-5 border-b border-navy-600 flex items-center justify-between">
+        <div className="px-6 py-5 border-b border-white/20 flex items-center justify-between">
           <div className="flex items-center gap-3">
             <div className="w-9 h-9 bg-white rounded-lg flex items-center justify-center flex-shrink-0">
-              <svg className="w-5 h-5 text-navy-700" fill="currentColor" viewBox="0 0 24 24">
+              <svg className="w-5 h-5" style={{ color: "#F47920" }} fill="currentColor" viewBox="0 0 24 24">
                 <path d="M17.66 7.93L12 2.27 6.34 7.93c-3.12 3.12-3.12 8.19 0 11.31C7.9 20.8 9.95 21.58 12 21.58c2.05 0 4.1-.78 5.66-2.34 3.12-3.12 3.12-8.19 0-11.31zM12 19.59c-1.6 0-3.11-.62-4.24-1.76C6.62 16.69 6 15.19 6 13.59s.62-3.11 1.76-4.24L12 5.1v14.49z"/>
               </svg>
             </div>
             <div>
               <p className="text-white font-semibold text-sm leading-tight">Les Hauts de</p>
               <p className="text-white font-semibold text-sm leading-tight">Californie</p>
-              <p className="text-navy-300 text-xs">SAV JardiPro</p>
+              <p className="text-white/70 text-xs">SAV JardiPro</p>
             </div>
           </div>
           {/* Close button — mobile only */}
           <button
             onClick={onClose}
-            className="md:hidden p-1.5 text-navy-300 hover:text-white hover:bg-white/10 rounded-lg transition-colors"
+            className="md:hidden p-1.5 text-white/70 hover:text-white hover:bg-white/20 rounded-lg transition-colors"
             aria-label="Fermer le menu"
           >
             <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -152,16 +153,16 @@ export function Sidebar({ userName, userRole, isOpen = false, onClose }: Sidebar
               onClick={handleNavClick}
               className={`flex items-center gap-3 px-3 py-3 rounded-lg text-sm font-medium transition-all duration-150 group
                 ${isActive(item.href)
-                  ? "bg-white/10 text-white"
-                  : "text-navy-200 hover:bg-white/5 hover:text-white"
+                  ? "bg-white/20 text-white"
+                  : "text-white/90 hover:bg-white/15 hover:text-white"
                 }`}
             >
-              <span className={`transition-colors ${isActive(item.href) ? "text-white" : "text-navy-300 group-hover:text-white"}`}>
+              <span className={`transition-colors ${isActive(item.href) ? "text-white" : "text-white/70 group-hover:text-white"}`}>
                 {item.icon}
               </span>
               <span className="flex-1">{item.name}</span>
               {item.href === "/admin/tickets" && unreadCount > 0 && (
-                <span className="min-w-[20px] h-5 px-1.5 bg-red-500 text-white text-xs font-bold rounded-full flex items-center justify-center leading-none">
+                <span className="min-w-[20px] h-5 px-1.5 bg-white text-[#F47920] text-xs font-bold rounded-full flex items-center justify-center leading-none">
                   {unreadCount > 99 ? "99+" : unreadCount}
                 </span>
               )}
@@ -170,22 +171,22 @@ export function Sidebar({ userName, userRole, isOpen = false, onClose }: Sidebar
         </nav>
 
         {/* User section */}
-        <div className="px-3 py-4 border-t border-navy-600">
+        <div className="px-3 py-4 border-t border-white/20">
           <div className="flex items-center gap-3 px-3 py-2 mb-2">
-            <div className="w-8 h-8 rounded-full bg-navy-600 flex items-center justify-center flex-shrink-0">
+            <div className="w-8 h-8 rounded-full bg-white/20 flex items-center justify-center flex-shrink-0">
               <span className="text-white text-xs font-semibold">
                 {userName?.charAt(0).toUpperCase() || "A"}
               </span>
             </div>
             <div className="min-w-0">
               <p className="text-white text-sm font-medium truncate">{userName || "Admin"}</p>
-              <p className="text-navy-300 text-xs">{userRole === "ADMIN" ? "Administrateur" : "Technicien"}</p>
+              <p className="text-white/70 text-xs">{userRole === "ADMIN" ? "Administrateur" : "Technicien"}</p>
             </div>
           </div>
           <button
             onClick={handleLogout}
             disabled={loggingOut}
-            className="flex items-center gap-2 w-full px-3 py-2.5 text-navy-200 hover:text-white hover:bg-white/5 rounded-lg text-sm transition-all"
+            className="flex items-center gap-2 w-full px-3 py-2.5 text-white/90 hover:text-white hover:bg-white/15 rounded-lg text-sm transition-all"
           >
             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
