@@ -15,7 +15,11 @@ export async function GET(request: NextRequest) {
   const search = searchParams.get("search");
 
   const where: Record<string, unknown> = {};
-  if (status) where.statut = status as Statut;
+  if (status === "active") {
+    where.statut = { notIn: ["LIVRE"] };
+  } else if (status) {
+    where.statut = status as Statut;
+  }
   if (search) {
     where.OR = [
       { numero: { contains: search, mode: "insensitive" } },
