@@ -121,11 +121,8 @@ export function Sidebar({ userName, userRole, isOpen = false, onClose }: Sidebar
         {/* Logo */}
         <div className="px-6 py-5 border-b border-white/20 flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <div className="w-9 h-9 bg-white rounded-lg flex items-center justify-center flex-shrink-0">
-              <svg className="w-5 h-5" style={{ color: "#F47920" }} fill="currentColor" viewBox="0 0 24 24">
-                <path d="M17.66 7.93L12 2.27 6.34 7.93c-3.12 3.12-3.12 8.19 0 11.31C7.9 20.8 9.95 21.58 12 21.58c2.05 0 4.1-.78 5.66-2.34 3.12-3.12 3.12-8.19 0-11.31zM12 19.59c-1.6 0-3.11-.62-4.24-1.76C6.62 16.69 6 15.19 6 13.59s.62-3.11 1.76-4.24L12 5.1v14.49z"/>
-              </svg>
-            </div>
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src="/logo.png" className="h-10 w-10 object-contain rounded flex-shrink-0" alt="JardiPro" />
             <div>
               <p className="text-white font-semibold text-sm leading-tight">Les Hauts de</p>
               <p className="text-white font-semibold text-sm leading-tight">Californie</p>
