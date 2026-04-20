@@ -7,6 +7,7 @@ import { StatusBadge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
 import { Input, Textarea, Select } from "@/components/ui/Input";
 import { StatusTimeline } from "@/components/client/StatusTimeline";
+import { ChatPanel } from "@/components/ui/ChatPanel";
 import { formatDate, formatDateTime, STATUT_LABELS } from "@/lib/utils";
 
 interface TicketDetail {
@@ -185,6 +186,20 @@ export default function TicketDetailPage() {
           <div className="bg-white rounded-xl border border-gray-100 shadow-sm p-6">
             <h2 className="font-semibold text-gray-900 mb-6">Historique des statuts</h2>
             <StatusTimeline historique={ticket.historique} currentStatut={ticket.statut} />
+          </div>
+
+          {/* Messages */}
+          <div className="bg-white rounded-xl border border-gray-100 shadow-sm overflow-hidden flex flex-col" style={{ height: 500 }}>
+            <div className="px-6 py-4 border-b border-gray-100 flex-shrink-0">
+              <h2 className="font-semibold text-gray-900">Messages</h2>
+              <p className="text-xs text-gray-400 mt-0.5">Conversation avec le client</p>
+            </div>
+            <ChatPanel
+              ticketId={ticket.id}
+              senderType="ADMIN"
+              fetchUrl={`/api/admin/tickets/${ticket.id}/messages`}
+              postUrl={`/api/admin/tickets/${ticket.id}/messages`}
+            />
           </div>
         </div>
 

@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 
 const navigation = [
   {
@@ -64,6 +64,19 @@ export function Sidebar({ userName, userRole, isOpen = false, onClose }: Sidebar
   const pathname = usePathname();
   const router = useRouter();
   const [loggingOut, setLoggingOut] = useState(false);
+  const [unreadCount, setUnreadCount] = useState(0);
+
+  useEffect(() => {
+    const fetchUnread = () => {
+      fetch("/api/admin/messages/unread")
+        .then((r) => r.json())
+        .then((d) => setUnreadCount(d.count || 0))
+        .catch(() => {});
+    };
+    fetchUnread();
+    const interval = setInterval(fetchUnread, 30000);
+    return () => clearInterval(interval);
+  }, []);
 
   const handleLogout = async () => {
     setLoggingOut(true);
@@ -146,7 +159,12 @@ export function Sidebar({ userName, userRole, isOpen = false, onClose }: Sidebar
               <span className={`transition-colors ${isActive(item.href) ? "text-white" : "text-navy-300 group-hover:text-white"}`}>
                 {item.icon}
               </span>
-              {item.name}
+              <span className="flex-1">{item.name}</span>
+              {item.href === "/admin/tickets" && unreadCount > 0 && (
+                <span className="min-w-[20px] h-5 px-1.5 bg-red-500 text-white text-xs font-bold rounded-full flex items-center justify-center leading-none">
+                  {unreadCount > 99 ? "99+" : unreadCount}
+                </span>
+              )}
             </Link>
           ))}
         </nav>

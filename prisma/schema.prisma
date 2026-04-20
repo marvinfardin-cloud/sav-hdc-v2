@@ -69,6 +69,7 @@ model Ticket {
   updatedAt      DateTime     @updatedAt
   historique     Historique[]
   photos         Photo[]
+  messages       Message[]
 }
 
 model Historique {
@@ -110,4 +111,21 @@ model Photo {
   url       String
   type      String
   createdAt DateTime @default(now())
+}
+
+enum SenderType {
+  CLIENT
+  ADMIN
+}
+
+model Message {
+  id          String     @id @default(cuid())
+  ticketId    String
+  ticket      Ticket     @relation(fields: [ticketId], references: [id], onDelete: Cascade)
+  senderId    String
+  senderType  SenderType
+  content     String
+  attachments String[]
+  readAt      DateTime?
+  createdAt   DateTime   @default(now())
 }

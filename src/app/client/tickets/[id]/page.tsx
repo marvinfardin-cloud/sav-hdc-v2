@@ -5,6 +5,7 @@ import { useParams } from "next/navigation";
 import Link from "next/link";
 import { StatusBadge } from "@/components/ui/Badge";
 import { StatusTimeline } from "@/components/client/StatusTimeline";
+import { ChatPanel } from "@/components/ui/ChatPanel";
 import { formatDate } from "@/lib/utils";
 
 interface TicketDetail {
@@ -144,6 +145,20 @@ export default function ClientTicketDetailPage() {
       <div className="bg-white rounded-xl border border-gray-100 shadow-sm p-6">
         <h2 className="font-semibold text-gray-900 mb-6">Suivi de réparation</h2>
         <StatusTimeline historique={ticket.historique} currentStatut={ticket.statut} />
+      </div>
+
+      {/* Messages */}
+      <div className="bg-white rounded-xl border border-gray-100 shadow-sm overflow-hidden flex flex-col" style={{ height: 480 }}>
+        <div className="px-6 py-4 border-b border-gray-100 flex-shrink-0">
+          <h2 className="font-semibold text-gray-900">Messages</h2>
+          <p className="text-xs text-gray-400 mt-0.5">Échangez directement avec l&apos;atelier</p>
+        </div>
+        <ChatPanel
+          ticketId={ticket.id}
+          senderType="CLIENT"
+          fetchUrl={`/api/tickets/${params.id}/messages`}
+          postUrl={`/api/tickets/${params.id}/messages`}
+        />
       </div>
     </div>
   );

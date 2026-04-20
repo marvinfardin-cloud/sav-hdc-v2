@@ -37,6 +37,7 @@ export async function GET(request: NextRequest) {
     include: {
       client: true,
       technicien: { select: { id: true, nom: true } },
+      _count: { select: { messages: { where: { senderType: "CLIENT", readAt: null } } } },
     },
   });
 

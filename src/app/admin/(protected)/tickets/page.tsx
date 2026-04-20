@@ -27,6 +27,7 @@ interface Ticket {
   dateEstimee?: string;
   client: Client;
   technicien?: { id: string; nom: string } | null;
+  _count?: { messages: number };
 }
 
 const STATUTS = ["RECU", "DIAGNOSTIC", "ATTENTE_PIECES", "EN_REPARATION", "PRET", "LIVRE"];
@@ -146,6 +147,11 @@ export default function TicketsPage() {
                   <div className="flex items-center gap-2 flex-wrap mb-1">
                     <span className="font-mono font-bold text-navy-700 text-sm">{ticket.numero}</span>
                     <StatusBadge statut={ticket.statut} size="sm" />
+                    {(ticket._count?.messages ?? 0) > 0 && (
+                      <span className="bg-red-500 text-white text-[10px] font-bold px-1.5 py-0.5 rounded-full leading-none">
+                        {ticket._count!.messages}
+                      </span>
+                    )}
                   </div>
                   <p className="text-sm font-medium text-gray-900">
                     {ticket.client.prenom} {ticket.client.nom}
@@ -205,7 +211,14 @@ export default function TicketsPage() {
                 tickets.map((ticket) => (
                   <tr key={ticket.id} className="hover:bg-gray-50/50 transition-colors">
                     <td className="px-6 py-4">
-                      <span className="font-mono font-semibold text-navy-700 text-sm">{ticket.numero}</span>
+                      <div className="flex items-center gap-2">
+                        <span className="font-mono font-semibold text-navy-700 text-sm">{ticket.numero}</span>
+                        {(ticket._count?.messages ?? 0) > 0 && (
+                          <span className="bg-red-500 text-white text-[10px] font-bold px-1.5 py-0.5 rounded-full leading-none">
+                            {ticket._count!.messages}
+                          </span>
+                        )}
+                      </div>
                     </td>
                     <td className="px-6 py-4">
                       <p className="text-sm font-medium text-gray-900">{ticket.client.prenom} {ticket.client.nom}</p>
