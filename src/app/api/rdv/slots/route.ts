@@ -15,6 +15,7 @@ function decimalToTime(decimal: number): string {
 export async function GET(request: NextRequest) {
   const { searchParams } = request.nextUrl;
   const dateStr = searchParams.get("date");
+  const type = searchParams.get("type");
 
   if (!dateStr) {
     return NextResponse.json(
@@ -37,7 +38,12 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ slots: [] }, { headers: noCacheHeaders() });
   }
 
-  // Saturday: morning only
+  // Dépôt de matériel is closed on Saturday
+  if (type === "depot" && dayOfWeek === 6) {
+    return NextResponse.json({ slots: [] }, { headers: noCacheHeaders() });
+  }
+
+  // Saturday: morning only (for non-depot types)
   const allSlots = dayOfWeek === 6
     ? MORNING_SLOTS
     : [...MORNING_SLOTS, ...AFTERNOON_SLOTS];
