@@ -97,7 +97,7 @@ export async function GET(request: NextRequest) {
 
   const delais = livres
     .filter((t) => t.historique.length > 0)
-    .map((t) => (t.historique[0].createdAt.getTime() - t.createdAt.getTime()) / 86400000);
+    .map((t) => Math.abs(t.historique[0].createdAt.getTime() - t.createdAt.getTime()) / 86400000);
   const delaiMoyen = delais.length > 0
     ? Math.round(delais.reduce((a, b) => a + b, 0) / delais.length)
     : 0;
@@ -112,7 +112,8 @@ export async function GET(request: NextRequest) {
   // Par marque (period)
   const marqueMap: Record<string, number> = {};
   for (const t of tickets) {
-    const m = t.marque?.trim() || "Autre";
+    const raw = t.marque?.trim() || "Autre";
+    const m = raw.charAt(0).toUpperCase() + raw.slice(1).toLowerCase();
     marqueMap[m] = (marqueMap[m] || 0) + 1;
   }
   const parMarque = Object.entries(marqueMap)
