@@ -7,11 +7,12 @@ import {
   LineChart, Line,
 } from "recharts";
 
-// ── Types ────────────────────────────────────────────────────────────────────
+// ── Types ─────────────────────────────────────────────────────────────────────
 
 interface Kpis {
   totalEntrees: number;
   totalRepares: number;
+  machinesSorties: number;
   tauxReparation: number;
   delaiMoyen: number;
   enAttentePieces: number;
@@ -41,7 +42,7 @@ interface StatsData {
   tickets: TicketRow[];
 }
 
-// ── Constants ────────────────────────────────────────────────────────────────
+// ── Constants ─────────────────────────────────────────────────────────────────
 
 const STATUT_LABELS: Record<string, string> = {
   RECU: "Reçu",
@@ -53,30 +54,47 @@ const STATUT_LABELS: Record<string, string> = {
 };
 
 const PIE_COLORS = ["#6366f1", "#f59e0b", "#F47920", "#8b5cf6", "#22c55e", "#94a3b8"];
-
 const BRAND_COLOR = "#F47920";
 
-// ── Date helpers ─────────────────────────────────────────────────────────────
+const CATEGORIES = [
+  { value: "all",      label: "Toutes les stats" },
+  { value: "entrees",  label: "Machines entrées" },
+  { value: "reparees", label: "Machines réparées" },
+  { value: "sorties",  label: "Machines sorties" },
+  { value: "taux",     label: "Taux de réparation" },
+  { value: "attente",  label: "Attente pièces" },
+  { value: "rdv",      label: "RDV pris" },
+  { value: "marque",   label: "Par marque" },
+  { value: "statut",   label: "Par statut" },
+] as const;
 
-function today(): string {
-  return new Date().toISOString().split("T")[0];
+type CatValue = typeof CATEGORIES[number]["value"];
+
+interface CatConfig {
+  kpis: string[];
+  charts: Array<"parMois" | "parStatut" | "parMarque" | "evolution">;
+  ticketFilter: (t: TicketRow) => boolean;
+  showTickets: boolean;
 }
 
-function mondayOfWeek(): string {
-  const d = new Date();
-  const day = d.getDay() || 7;
-  d.setDate(d.getDate() - day + 1);
-  return d.toISOString().split("T")[0];
-}
+const CAT_CONFIG: Record<CatValue, CatConfig> = {
+  all:      { kpis: ["all"], charts: ["parMois", "parStatut", "parMarque", "evolution"], ticketFilter: () => true,                                         showTickets: true  },
+  entrees:  { kpis: ["totalEntrees"],                                                    charts: ["parMois", "evolution"],                                  ticketFilter: () => true,                                                          showTickets: true  },
+  reparees: { kpis: ["totalRepares", "tauxReparation", "delaiMoyen"],                   charts: ["parStatut"],                                             ticketFilter: (t) => t.statut === "LIVRE",                                         showTickets: true  },
+  sorties:  { kpis: ["machinesSorties"],                                                 charts: ["parMois"],                                               ticketFilter: (t) => t.statut === "LIVRE" && t.dateLivraison !== null,            showTickets: true  },
+  taux:     { kpis: ["totalEntrees", "totalRepares", "tauxReparation"],                 charts: ["parStatut"],                                             ticketFilter: () => true,                                                          showTickets: false },
+  attente:  { kpis: ["enAttentePieces"],                                                 charts: [],                                                        ticketFilter: (t) => t.statut === "ATTENTE_PIECES",                               showTickets: true  },
+  rdv:      { kpis: ["rdvPeriode"],                                                      charts: [],                                                        ticketFilter: () => false,                                                         showTickets: false },
+  marque:   { kpis: ["totalEntrees"],                                                    charts: ["parMarque"],                                             ticketFilter: () => true,                                                          showTickets: true  },
+  statut:   { kpis: ["totalEntrees"],                                                    charts: ["parStatut"],                                             ticketFilter: () => true,                                                          showTickets: true  },
+};
 
-function firstOfMonth(): string {
-  const d = new Date();
-  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-01`;
-}
+// ── Date helpers ──────────────────────────────────────────────────────────────
 
-function firstOfYear(): string {
-  return `${new Date().getFullYear()}-01-01`;
-}
+function today()        { return new Date().toISOString().split("T")[0]; }
+function mondayOfWeek() { const d = new Date(); const day = d.getDay() || 7; d.setDate(d.getDate() - day + 1); return d.toISOString().split("T")[0]; }
+function firstOfMonth() { const d = new Date(); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-01`; }
+function firstOfYear()  { return `${new Date().getFullYear()}-01-01`; }
 
 const PRESETS = [
   { label: "Cette semaine", from: mondayOfWeek, to: today },
@@ -84,7 +102,7 @@ const PRESETS = [
   { label: "Cette année",   from: firstOfYear,  to: today },
 ] as const;
 
-// ── KPI card ─────────────────────────────────────────────────────────────────
+// ── Small components ──────────────────────────────────────────────────────────
 
 function KpiCard({ label, value, unit, sub }: { label: string; value: string | number; unit?: string; sub?: string }) {
   return (
@@ -98,8 +116,6 @@ function KpiCard({ label, value, unit, sub }: { label: string; value: string | n
   );
 }
 
-// ── Section wrapper ───────────────────────────────────────────────────────────
-
 function Section({ title, children }: { title: string; children: React.ReactNode }) {
   return (
     <div className="bg-white rounded-xl border border-gray-100 shadow-sm p-5">
@@ -109,45 +125,91 @@ function Section({ title, children }: { title: string; children: React.ReactNode
   );
 }
 
-// ── Export helpers (client-side) ──────────────────────────────────────────────
+function Spinner() {
+  return (
+    <svg className="animate-spin w-4 h-4" fill="none" viewBox="0 0 24 24">
+      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"/>
+      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/>
+    </svg>
+  );
+}
 
-async function exportExcel(tickets: TicketRow[], kpis: Kpis, from: string, to: string) {
+// ── Ticket table ──────────────────────────────────────────────────────────────
+
+function TicketTable({ tickets }: { tickets: TicketRow[] }) {
+  if (tickets.length === 0) return <p className="text-sm text-gray-400 text-center py-6">Aucun ticket pour ce filtre.</p>;
+  return (
+    <div className="overflow-x-auto">
+      <table className="w-full text-sm">
+        <thead>
+          <tr className="border-b border-gray-100">
+            {["N° Ticket","Client","Machine","Marque","Statut","Date entrée","Date livraison","Délai (j)"].map((h) => (
+              <th key={h} className="text-left text-xs font-semibold text-gray-500 pb-2 pr-4 whitespace-nowrap">{h}</th>
+            ))}
+          </tr>
+        </thead>
+        <tbody>
+          {tickets.map((t) => (
+            <tr key={t.numero} className="border-b border-gray-50 hover:bg-gray-50">
+              <td className="py-2 pr-4 font-mono font-semibold text-xs" style={{ color: "#F47920" }}>{t.numero}</td>
+              <td className="py-2 pr-4 whitespace-nowrap">{t.client}</td>
+              <td className="py-2 pr-4">{t.materiel}</td>
+              <td className="py-2 pr-4">{t.marque}</td>
+              <td className="py-2 pr-4 whitespace-nowrap">
+                <span className="px-2 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-700">
+                  {STATUT_LABELS[t.statut] ?? t.statut}
+                </span>
+              </td>
+              <td className="py-2 pr-4 whitespace-nowrap text-gray-500">{t.dateEntree ? new Date(t.dateEntree).toLocaleDateString("fr-FR") : "—"}</td>
+              <td className="py-2 pr-4 whitespace-nowrap text-gray-500">{t.dateLivraison ? new Date(t.dateLivraison).toLocaleDateString("fr-FR") : "—"}</td>
+              <td className="py-2 pr-4 text-gray-500">{t.delai != null ? t.delai : "—"}</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  );
+}
+
+// ── Export helpers ────────────────────────────────────────────────────────────
+
+async function exportExcel(tickets: TicketRow[], kpis: Kpis, from: string, to: string, title: string) {
   const ExcelJS = (await import("exceljs")).default;
   const wb = new ExcelJS.Workbook();
   wb.creator = "SAV JardiPro";
 
-  // KPI sheet
   const kpiSheet = wb.addWorksheet("KPIs");
-  kpiSheet.addRow(["Indicateur", "Valeur"]);
+  kpiSheet.addRow([title]);
   kpiSheet.addRow(["Période", `${from} → ${to}`]);
-  kpiSheet.addRow(["Machines entrées", kpis.totalEntrees]);
-  kpiSheet.addRow(["Machines réparées", kpis.totalRepares]);
-  kpiSheet.addRow(["Taux de réparation", `${kpis.tauxReparation} %`]);
+  kpiSheet.addRow([]);
+  kpiSheet.addRow(["Indicateur", "Valeur"]);
+  kpiSheet.addRow(["Machines entrées",          kpis.totalEntrees]);
+  kpiSheet.addRow(["Machines réparées",         kpis.totalRepares]);
+  kpiSheet.addRow(["Machines sorties",          kpis.machinesSorties]);
+  kpiSheet.addRow(["Taux de réparation",        `${kpis.tauxReparation} %`]);
   kpiSheet.addRow(["Délai moyen de réparation", `${kpis.delaiMoyen} jours`]);
-  kpiSheet.addRow(["En attente pièces (actuel)", kpis.enAttentePieces]);
-  kpiSheet.addRow(["RDV pris sur la période", kpis.rdvPeriode]);
+  kpiSheet.addRow(["En attente pièces (actuel)",kpis.enAttentePieces]);
+  kpiSheet.addRow(["RDV pris sur la période",   kpis.rdvPeriode]);
 
-  // Tickets sheet
   const ws = wb.addWorksheet("Tickets");
   ws.columns = [
-    { header: "N° Ticket",       key: "numero",        width: 16 },
-    { header: "Client",          key: "client",        width: 24 },
-    { header: "Machine",         key: "materiel",      width: 20 },
-    { header: "Marque",          key: "marque",        width: 14 },
-    { header: "Statut",          key: "statut",        width: 18 },
-    { header: "Date entrée",     key: "dateEntree",    width: 16 },
-    { header: "Date livraison",  key: "dateLivraison", width: 16 },
-    { header: "Délai (jours)",   key: "delai",         width: 14 },
+    { header: "N° Ticket",      key: "numero",        width: 16 },
+    { header: "Client",         key: "client",        width: 24 },
+    { header: "Machine",        key: "materiel",      width: 20 },
+    { header: "Marque",         key: "marque",        width: 14 },
+    { header: "Statut",         key: "statut",        width: 18 },
+    { header: "Date entrée",    key: "dateEntree",    width: 16 },
+    { header: "Date livraison", key: "dateLivraison", width: 16 },
+    { header: "Délai (jours)",  key: "delai",         width: 14 },
   ];
   ws.getRow(1).font = { bold: true };
-
   for (const t of tickets) {
     ws.addRow({
       ...t,
-      statut: STATUT_LABELS[t.statut] ?? t.statut,
+      statut:        STATUT_LABELS[t.statut] ?? t.statut,
       dateEntree:    t.dateEntree    ? new Date(t.dateEntree).toLocaleDateString("fr-FR")    : "",
       dateLivraison: t.dateLivraison ? new Date(t.dateLivraison).toLocaleDateString("fr-FR") : "",
-      delai: t.delai ?? "",
+      delai:         t.delai ?? "",
     });
   }
 
@@ -156,36 +218,34 @@ async function exportExcel(tickets: TicketRow[], kpis: Kpis, from: string, to: s
   const url = URL.createObjectURL(blob);
   const a = document.createElement("a");
   a.href = url;
-  a.download = `stats-sav-${from}-${to}.xlsx`;
+  a.download = `${title.replace(/[^a-z0-9]/gi, "-").toLowerCase()}-${from}-${to}.xlsx`;
   a.click();
   URL.revokeObjectURL(url);
 }
 
-async function exportPdf(tickets: TicketRow[], kpis: Kpis, from: string, to: string) {
+async function exportPdf(tickets: TicketRow[], kpis: Kpis, from: string, to: string, title: string) {
   const { default: jsPDF } = await import("jspdf");
   const { default: autoTable } = await import("jspdf-autotable");
 
   const doc = new jsPDF({ orientation: "landscape" });
-
-  // Header
   doc.setFontSize(16);
   doc.setTextColor(244, 121, 32);
-  doc.text("SAV JardiPro — Rapport statistiques", 14, 18);
+  doc.text(`SAV JardiPro — ${title}`, 14, 18);
   doc.setFontSize(10);
   doc.setTextColor(100);
   doc.text(`Période : ${from} → ${to}`, 14, 26);
 
-  // KPI summary
   autoTable(doc, {
     startY: 32,
     head: [["Indicateur", "Valeur"]],
     body: [
-      ["Machines entrées",             String(kpis.totalEntrees)],
-      ["Machines réparées",            String(kpis.totalRepares)],
-      ["Taux de réparation",           `${kpis.tauxReparation} %`],
-      ["Délai moyen de réparation",    `${kpis.delaiMoyen} jours`],
-      ["En attente pièces (actuel)",   String(kpis.enAttentePieces)],
-      ["RDV pris sur la période",      String(kpis.rdvPeriode)],
+      ["Machines entrées",           String(kpis.totalEntrees)],
+      ["Machines réparées",          String(kpis.totalRepares)],
+      ["Machines sorties",           String(kpis.machinesSorties)],
+      ["Taux de réparation",         `${kpis.tauxReparation} %`],
+      ["Délai moyen de réparation",  `${kpis.delaiMoyen} jours`],
+      ["En attente pièces (actuel)", String(kpis.enAttentePieces)],
+      ["RDV pris sur la période",    String(kpis.rdvPeriode)],
     ],
     theme: "striped",
     headStyles: { fillColor: [244, 121, 32] },
@@ -193,21 +253,17 @@ async function exportPdf(tickets: TicketRow[], kpis: Kpis, from: string, to: str
     tableWidth: 100,
   });
 
-  // Ticket list
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const afterKpis = (doc as any).lastAutoTable?.finalY ?? 80;
   autoTable(doc, {
     startY: afterKpis + 10,
-    head: [["N° Ticket", "Client", "Machine", "Marque", "Statut", "Date entrée", "Date livraison", "Délai (j)"]],
+    head: [["N° Ticket","Client","Machine","Marque","Statut","Date entrée","Date livraison","Délai (j)"]],
     body: tickets.map((t) => [
-      t.numero,
-      t.client,
-      t.materiel,
-      t.marque,
+      t.numero, t.client, t.materiel, t.marque,
       STATUT_LABELS[t.statut] ?? t.statut,
       t.dateEntree    ? new Date(t.dateEntree).toLocaleDateString("fr-FR")    : "",
-      t.dateLivraison ? new Date(t.dateLivraison).toLocaleDateString("fr-FR") : "-",
-      t.delai != null ? String(t.delai) : "-",
+      t.dateLivraison ? new Date(t.dateLivraison).toLocaleDateString("fr-FR") : "—",
+      t.delai != null ? String(t.delai) : "—",
     ]),
     theme: "striped",
     headStyles: { fillColor: [244, 121, 32] },
@@ -215,18 +271,19 @@ async function exportPdf(tickets: TicketRow[], kpis: Kpis, from: string, to: str
     margin: { left: 14, right: 14 },
   });
 
-  doc.save(`stats-sav-${from}-${to}.pdf`);
+  doc.save(`${title.replace(/[^a-z0-9]/gi, "-").toLowerCase()}-${from}-${to}.pdf`);
 }
 
 // ── Main page ─────────────────────────────────────────────────────────────────
 
 export default function StatsPage() {
-  const [from, setFrom] = useState(firstOfMonth());
-  const [to,   setTo]   = useState(today());
-  const [data, setData] = useState<StatsData | null>(null);
-  const [loading, setLoading] = useState(false);
+  const [from, setFrom]               = useState(firstOfMonth());
+  const [to,   setTo]                 = useState(today());
+  const [data, setData]               = useState<StatsData | null>(null);
+  const [loading, setLoading]         = useState(false);
   const [activePreset, setActivePreset] = useState<string>("Ce mois");
-  const [exporting, setExporting] = useState<"excel" | "pdf" | null>(null);
+  const [activeCategory, setActiveCategory] = useState<CatValue>("all");
+  const [exporting, setExporting]     = useState<"excel" | "pdf" | null>(null);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -246,19 +303,31 @@ export default function StatsPage() {
     setTo(toFn());
   }
 
+  // Derived values based on active category
+  const config = CAT_CONFIG[activeCategory];
+  const showKpi   = (key: string) => config.kpis.includes("all") || config.kpis.includes(key);
+  const showChart = (key: "parMois" | "parStatut" | "parMarque" | "evolution") => config.charts.includes(key);
+  const filteredTickets = data ? data.tickets.filter(config.ticketFilter) : [];
+  const catLabel   = CATEGORIES.find((c) => c.value === activeCategory)?.label ?? "Statistiques";
+  const exportTitle = activeCategory === "all"
+    ? "Rapport statistiques complet"
+    : `Bilan - ${catLabel}`;
+
   async function handleExcel() {
     if (!data) return;
     setExporting("excel");
-    try { await exportExcel(data.tickets, data.kpis, from, to); }
+    try { await exportExcel(filteredTickets, data.kpis, from, to, exportTitle); }
     finally { setExporting(null); }
   }
 
   async function handlePdf() {
     if (!data) return;
     setExporting("pdf");
-    try { await exportPdf(data.tickets, data.kpis, from, to); }
+    try { await exportPdf(filteredTickets, data.kpis, from, to, exportTitle); }
     finally { setExporting(null); }
   }
+
+  const hasCharts = config.charts.length > 0;
 
   return (
     <div className="space-y-6 animate-fadeIn">
@@ -269,34 +338,18 @@ export default function StatsPage() {
           <p className="text-gray-500 text-sm mt-0.5">Analyse des performances du SAV</p>
         </div>
         <div className="flex gap-2">
-          <button
-            onClick={handleExcel}
-            disabled={!data || exporting !== null}
-            className="flex items-center gap-2 px-3 py-2 bg-green-600 text-white rounded-lg text-sm font-medium hover:bg-green-700 disabled:opacity-50 transition-colors"
-          >
-            {exporting === "excel" ? (
-              <svg className="animate-spin w-4 h-4" fill="none" viewBox="0 0 24 24">
-                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"/>
-                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/>
-              </svg>
-            ) : (
+          <button onClick={handleExcel} disabled={!data || exporting !== null}
+            className="flex items-center gap-2 px-3 py-2 bg-green-600 text-white rounded-lg text-sm font-medium hover:bg-green-700 disabled:opacity-50 transition-colors">
+            {exporting === "excel" ? <Spinner /> : (
               <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
               </svg>
             )}
             Exporter Excel
           </button>
-          <button
-            onClick={handlePdf}
-            disabled={!data || exporting !== null}
-            className="flex items-center gap-2 px-3 py-2 bg-red-600 text-white rounded-lg text-sm font-medium hover:bg-red-700 disabled:opacity-50 transition-colors"
-          >
-            {exporting === "pdf" ? (
-              <svg className="animate-spin w-4 h-4" fill="none" viewBox="0 0 24 24">
-                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"/>
-                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/>
-              </svg>
-            ) : (
+          <button onClick={handlePdf} disabled={!data || exporting !== null}
+            className="flex items-center gap-2 px-3 py-2 bg-red-600 text-white rounded-lg text-sm font-medium hover:bg-red-700 disabled:opacity-50 transition-colors">
+            {exporting === "pdf" ? <Spinner /> : (
               <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z" />
               </svg>
@@ -311,161 +364,163 @@ export default function StatsPage() {
         <div className="flex flex-wrap items-center gap-3">
           <div className="flex gap-1.5 flex-wrap">
             {PRESETS.map((p) => (
-              <button
-                key={p.label}
-                onClick={() => applyPreset(p.label, p.from, p.to)}
-                className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${
-                  activePreset === p.label
-                    ? "text-white"
-                    : "bg-gray-100 text-gray-600 hover:bg-gray-200"
-                }`}
-                style={activePreset === p.label ? { backgroundColor: "#F47920" } : {}}
-              >
+              <button key={p.label} onClick={() => applyPreset(p.label, p.from, p.to)}
+                className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${activePreset === p.label ? "text-white" : "bg-gray-100 text-gray-600 hover:bg-gray-200"}`}
+                style={activePreset === p.label ? { backgroundColor: "#F47920" } : {}}>
                 {p.label}
               </button>
             ))}
-            <button
-              onClick={() => setActivePreset("custom")}
-              className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${
-                activePreset === "custom"
-                  ? "text-white"
-                  : "bg-gray-100 text-gray-600 hover:bg-gray-200"
-              }`}
-              style={activePreset === "custom" ? { backgroundColor: "#F47920" } : {}}
-            >
+            <button onClick={() => setActivePreset("custom")}
+              className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${activePreset === "custom" ? "text-white" : "bg-gray-100 text-gray-600 hover:bg-gray-200"}`}
+              style={activePreset === "custom" ? { backgroundColor: "#F47920" } : {}}>
               Personnalisé
             </button>
           </div>
           <div className="flex items-center gap-2 ml-auto flex-wrap">
-            <input
-              type="date"
-              value={from}
-              onChange={(e) => { setFrom(e.target.value); setActivePreset("custom"); }}
-              className="px-2 py-1.5 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-1 focus:ring-stihl-500"
-            />
+            <input type="date" value={from} onChange={(e) => { setFrom(e.target.value); setActivePreset("custom"); }}
+              className="px-2 py-1.5 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-1 focus:ring-stihl-500" />
             <span className="text-gray-400 text-sm">→</span>
-            <input
-              type="date"
-              value={to}
-              onChange={(e) => { setTo(e.target.value); setActivePreset("custom"); }}
-              className="px-2 py-1.5 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-1 focus:ring-stihl-500"
-            />
+            <input type="date" value={to} onChange={(e) => { setTo(e.target.value); setActivePreset("custom"); }}
+              className="px-2 py-1.5 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-1 focus:ring-stihl-500" />
           </div>
         </div>
+      </div>
+
+      {/* Category filter */}
+      <div className="bg-white rounded-xl border border-gray-100 shadow-sm p-4">
+        <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-3">Filtrer par catégorie</p>
+        <div className="flex flex-wrap gap-2">
+          {CATEGORIES.map((c) => (
+            <button key={c.value} onClick={() => setActiveCategory(c.value)}
+              className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors border ${
+                activeCategory === c.value
+                  ? "text-white border-transparent"
+                  : "bg-white text-gray-600 border-gray-200 hover:border-gray-300 hover:bg-gray-50"
+              }`}
+              style={activeCategory === c.value ? { backgroundColor: "#F47920" } : {}}>
+              {c.label}
+            </button>
+          ))}
+        </div>
+        {activeCategory !== "all" && (
+          <p className="text-xs text-gray-400 mt-3">
+            Export : <span className="font-medium text-gray-600">{exportTitle} — {from} → {to}</span>
+          </p>
+        )}
       </div>
 
       {/* Loading */}
       {loading && (
         <div className="flex items-center justify-center py-20 text-gray-400 gap-3">
-          <svg className="animate-spin w-5 h-5" fill="none" viewBox="0 0 24 24">
-            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"/>
-            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/>
-          </svg>
-          Chargement...
+          <Spinner /> Chargement...
         </div>
       )}
 
       {!loading && data && (
         <>
           {/* KPI cards */}
-          <div className="grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-6 gap-4">
-            <KpiCard label="Machines entrées"       value={data.kpis.totalEntrees} />
-            <KpiCard label="Machines réparées"      value={data.kpis.totalRepares} />
-            <KpiCard label="Taux de réparation"     value={data.kpis.tauxReparation} unit="%" />
-            <KpiCard label="Délai moyen"            value={data.kpis.delaiMoyen} unit="j" sub="entre dépôt et livraison" />
-            <KpiCard label="Attente pièces"         value={data.kpis.enAttentePieces} sub="en cours (toutes périodes)" />
-            <KpiCard label="RDV pris"               value={data.kpis.rdvPeriode} sub="sur la période" />
-          </div>
+          {(() => {
+            const cards = [
+              showKpi("totalEntrees")    && <KpiCard key="e"  label="Machines entrées"    value={data.kpis.totalEntrees} />,
+              showKpi("totalRepares")    && <KpiCard key="r"  label="Machines réparées"   value={data.kpis.totalRepares} />,
+              showKpi("machinesSorties") && <KpiCard key="s"  label="Machines sorties"    value={data.kpis.machinesSorties} sub="Livré avec date de retrait" />,
+              showKpi("tauxReparation")  && <KpiCard key="t"  label="Taux de réparation"  value={data.kpis.tauxReparation} unit="%" />,
+              showKpi("delaiMoyen")      && <KpiCard key="d"  label="Délai moyen"         value={data.kpis.delaiMoyen} unit="j" sub="entre dépôt et livraison" />,
+              showKpi("enAttentePieces") && <KpiCard key="a"  label="Attente pièces"      value={data.kpis.enAttentePieces} sub="en cours (toutes périodes)" />,
+              showKpi("rdvPeriode")      && <KpiCard key="rv" label="RDV pris"            value={data.kpis.rdvPeriode} sub="sur la période" />,
+            ].filter(Boolean);
+            return cards.length > 0 ? (
+              <div className={`grid gap-4 ${cards.length <= 3 ? "grid-cols-1 sm:grid-cols-3" : cards.length <= 4 ? "grid-cols-2 sm:grid-cols-4" : "grid-cols-2 sm:grid-cols-3 xl:grid-cols-" + cards.length}`}>
+                {cards}
+              </div>
+            ) : null;
+          })()}
 
-          {/* Charts row 1 */}
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-            <Section title="Machines entrées par mois (12 derniers mois)">
-              <ResponsiveContainer width="100%" height={220}>
-                <BarChart data={data.parMois} margin={{ top: 4, right: 8, left: -20, bottom: 0 }}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
-                  <XAxis dataKey="month" tick={{ fontSize: 11 }} />
-                  <YAxis tick={{ fontSize: 11 }} allowDecimals={false} />
-                  <Tooltip />
-                  <Bar dataKey="count" name="Entrées" fill={BRAND_COLOR} radius={[4, 4, 0, 0]} />
-                </BarChart>
-              </ResponsiveContainer>
-            </Section>
-
-            <Section title="Répartition par statut">
-              {data.parStatut.length === 0 ? (
-                <p className="text-sm text-gray-400 text-center py-16">Aucune donnée</p>
-              ) : (
-                <ResponsiveContainer width="100%" height={320}>
-                  <PieChart>
-                    <Pie
-                      data={data.parStatut.map((d) => ({ ...d, name: STATUT_LABELS[d.name] ?? d.name }))}
-                      cx="50%"
-                      cy="45%"
-                      outerRadius={80}
-                      dataKey="value"
-                      label={({ name, percent }) => `${name} ${Math.round((percent ?? 0) * 100)}%`}
-                      labelLine={true}
-                    >
-                      {data.parStatut.map((_, i) => (
-                        <Cell key={i} fill={PIE_COLORS[i % PIE_COLORS.length]} />
-                      ))}
-                    </Pie>
-                    <Tooltip formatter={(v, n) => [v, n]} />
-                    <Legend
-                      formatter={(value) => <span style={{ fontSize: 11 }}>{value}</span>}
-                    />
-                  </PieChart>
-                </ResponsiveContainer>
+          {/* Charts */}
+          {hasCharts && (
+            <>
+              {(showChart("parMois") || showChart("parStatut")) && (
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                  {showChart("parMois") && (
+                    <Section title="Machines entrées par mois (12 derniers mois)">
+                      <ResponsiveContainer width="100%" height={220}>
+                        <BarChart data={data.parMois} margin={{ top: 4, right: 8, left: -20, bottom: 0 }}>
+                          <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
+                          <XAxis dataKey="month" tick={{ fontSize: 11 }} />
+                          <YAxis tick={{ fontSize: 11 }} allowDecimals={false} />
+                          <Tooltip />
+                          <Bar dataKey="count" name="Entrées" fill={BRAND_COLOR} radius={[4, 4, 0, 0]} />
+                        </BarChart>
+                      </ResponsiveContainer>
+                    </Section>
+                  )}
+                  {showChart("parStatut") && (
+                    <Section title="Répartition par statut">
+                      {data.parStatut.length === 0 ? (
+                        <p className="text-sm text-gray-400 text-center py-16">Aucune donnée</p>
+                      ) : (
+                        <ResponsiveContainer width="100%" height={320}>
+                          <PieChart>
+                            <Pie data={data.parStatut.map((d) => ({ ...d, name: STATUT_LABELS[d.name] ?? d.name }))}
+                              cx="50%" cy="45%" outerRadius={80} dataKey="value"
+                              label={({ name, percent }) => `${name} ${Math.round((percent ?? 0) * 100)}%`}
+                              labelLine={true}>
+                              {data.parStatut.map((_, i) => <Cell key={i} fill={PIE_COLORS[i % PIE_COLORS.length]} />)}
+                            </Pie>
+                            <Tooltip formatter={(v, n) => [v, n]} />
+                            <Legend formatter={(v) => <span style={{ fontSize: 11 }}>{v}</span>} />
+                          </PieChart>
+                        </ResponsiveContainer>
+                      )}
+                    </Section>
+                  )}
+                </div>
               )}
-            </Section>
-          </div>
 
-          {/* Charts row 2 */}
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-            <Section title="Répartition par marque">
-              {data.parMarque.length === 0 ? (
-                <p className="text-sm text-gray-400 text-center py-16">Aucune donnée</p>
-              ) : (
-                <ResponsiveContainer width="100%" height={220}>
-                  <BarChart
-                    data={data.parMarque}
-                    layout="vertical"
-                    margin={{ top: 4, right: 20, left: 40, bottom: 0 }}
-                  >
-                    <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" horizontal={false} />
-                    <XAxis type="number" tick={{ fontSize: 11 }} allowDecimals={false} />
-                    <YAxis type="category" dataKey="name" tick={{ fontSize: 11 }} width={70} />
-                    <Tooltip />
-                    <Bar dataKey="value" name="Tickets" fill={BRAND_COLOR} radius={[0, 4, 4, 0]} />
-                  </BarChart>
-                </ResponsiveContainer>
+              {(showChart("parMarque") || showChart("evolution")) && (
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                  {showChart("parMarque") && (
+                    <Section title="Répartition par marque">
+                      {data.parMarque.length === 0 ? (
+                        <p className="text-sm text-gray-400 text-center py-16">Aucune donnée</p>
+                      ) : (
+                        <ResponsiveContainer width="100%" height={220}>
+                          <BarChart data={data.parMarque} layout="vertical" margin={{ top: 4, right: 20, left: 40, bottom: 0 }}>
+                            <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" horizontal={false} />
+                            <XAxis type="number" tick={{ fontSize: 11 }} allowDecimals={false} />
+                            <YAxis type="category" dataKey="name" tick={{ fontSize: 11 }} width={70} />
+                            <Tooltip />
+                            <Bar dataKey="value" name="Tickets" fill={BRAND_COLOR} radius={[0, 4, 4, 0]} />
+                          </BarChart>
+                        </ResponsiveContainer>
+                      )}
+                    </Section>
+                  )}
+                  {showChart("evolution") && (
+                    <Section title="Évolution mensuelle (24 derniers mois)">
+                      <ResponsiveContainer width="100%" height={220}>
+                        <LineChart data={data.evolution} margin={{ top: 4, right: 8, left: -20, bottom: 0 }}>
+                          <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
+                          <XAxis dataKey="month" tick={{ fontSize: 10 }} interval={3} />
+                          <YAxis tick={{ fontSize: 11 }} allowDecimals={false} />
+                          <Tooltip />
+                          <Line type="monotone" dataKey="count" name="Entrées" stroke={BRAND_COLOR}
+                            strokeWidth={2} dot={false} activeDot={{ r: 4 }} />
+                        </LineChart>
+                      </ResponsiveContainer>
+                    </Section>
+                  )}
+                </div>
               )}
-            </Section>
+            </>
+          )}
 
-            <Section title="Évolution mensuelle (24 derniers mois)">
-              <ResponsiveContainer width="100%" height={220}>
-                <LineChart data={data.evolution} margin={{ top: 4, right: 8, left: -20, bottom: 0 }}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
-                  <XAxis
-                    dataKey="month"
-                    tick={{ fontSize: 10 }}
-                    interval={3}
-                  />
-                  <YAxis tick={{ fontSize: 11 }} allowDecimals={false} />
-                  <Tooltip />
-                  <Line
-                    type="monotone"
-                    dataKey="count"
-                    name="Entrées"
-                    stroke={BRAND_COLOR}
-                    strokeWidth={2}
-                    dot={false}
-                    activeDot={{ r: 4 }}
-                  />
-                </LineChart>
-              </ResponsiveContainer>
+          {/* Filtered ticket list */}
+          {config.showTickets && (
+            <Section title={`Liste des tickets — ${catLabel} (${filteredTickets.length})`}>
+              <TicketTable tickets={filteredTickets} />
             </Section>
-          </div>
+          )}
         </>
       )}
     </div>

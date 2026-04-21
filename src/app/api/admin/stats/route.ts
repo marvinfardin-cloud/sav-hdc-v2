@@ -95,8 +95,10 @@ export async function GET(request: NextRequest) {
   const totalRepares = livres.length;
   const tauxReparation = totalEntrees > 0 ? Math.round((totalRepares / totalEntrees) * 100) : 0;
 
-  const delais = livres
-    .filter((t) => t.historique.length > 0)
+  const livresAvecDate = livres.filter((t) => t.historique.length > 0);
+  const machinesSorties = livresAvecDate.length;
+
+  const delais = livresAvecDate
     .map((t) => Math.abs(t.historique[0].createdAt.getTime() - t.createdAt.getTime()) / 86400000);
   const delaiMoyen = delais.length > 0
     ? Math.round(delais.reduce((a, b) => a + b, 0) / delais.length)
@@ -159,7 +161,7 @@ export async function GET(request: NextRequest) {
 
   return NextResponse.json(
     {
-      kpis: { totalEntrees, totalRepares, tauxReparation, delaiMoyen, enAttentePieces, rdvPeriode },
+      kpis: { totalEntrees, totalRepares, machinesSorties, tauxReparation, delaiMoyen, enAttentePieces, rdvPeriode },
       parStatut,
       parMarque,
       parMois,
