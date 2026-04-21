@@ -542,22 +542,23 @@ export default function StatsPage() {
                   {showChart("evolution") && (
                     <Section title="Évolution mensuelle (24 derniers mois)">
                       <ResponsiveContainer width="100%" height={240}>
-                        <AreaChart data={data.evolution} margin={{ top: 10, right: 8, left: -20, bottom: 0 }}>
+                        <AreaChart data={data.evolution} margin={{ top: 16, right: 8, left: -24, bottom: 0 }}>
                           <defs>
                             <linearGradient id="areaGrad" x1="0" y1="0" x2="0" y2="1">
-                              <stop offset="5%" stopColor="#F47920" stopOpacity={0.3} />
-                              <stop offset="95%" stopColor="#F47920" stopOpacity={0} />
+                              <stop offset="0%"  stopColor="#F47920" stopOpacity={0.3} />
+                              <stop offset="100%" stopColor="#F47920" stopOpacity={0} />
                             </linearGradient>
                           </defs>
-                          <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
-                          <XAxis dataKey="month" tick={{ fontSize: 10 }} interval={3} />
-                          <YAxis tick={{ fontSize: 11 }} allowDecimals={false} />
-                          <Tooltip />
+                          <CartesianGrid strokeDasharray="3 3" stroke="#f3f4f6" vertical={false} />
+                          <XAxis dataKey="month" tick={{ fontSize: 10, fill: "#9ca3af" }} axisLine={false} tickLine={false} interval={3} />
+                          <YAxis tick={{ fontSize: 10, fill: "#d1d5db" }} axisLine={false} tickLine={false} allowDecimals={false} />
+                          <Tooltip cursor={{ stroke: "#F47920", strokeWidth: 1, strokeDasharray: "4 4" }} contentStyle={{ borderRadius: 10, border: "none", boxShadow: "0 4px 20px rgba(0,0,0,0.1)", fontSize: 12 }} />
                           <Area type="monotone" dataKey="count" name="Entrées"
                             stroke={BRAND_COLOR} strokeWidth={3}
                             fill="url(#areaGrad)"
-                            dot={{ r: 3, fill: BRAND_COLOR, strokeWidth: 0 }}
-                            activeDot={{ r: 5 }} />
+                            dot={{ r: 4, fill: "#F47920", stroke: "#fff", strokeWidth: 2 }}
+                            activeDot={{ r: 6, fill: "#F47920", stroke: "#fff", strokeWidth: 2 }}
+                            isAnimationActive={true} animationDuration={900} animationEasing="ease-out" />
                         </AreaChart>
                       </ResponsiveContainer>
                     </Section>
