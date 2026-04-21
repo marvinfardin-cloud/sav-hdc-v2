@@ -19,7 +19,10 @@
     "@prisma/client": "^5.14.0",
     "autoprefixer": "^10.4.19",
     "bcryptjs": "^2.4.3",
+    "exceljs": "^4.4.0",
     "jose": "^5.9.6",
+    "jspdf": "^4.2.1",
+    "jspdf-autotable": "^5.0.7",
     "next": "14.2.3",
     "nodemailer": "^6.9.14",
     "postcss": "^8.4.38",
@@ -27,6 +30,7 @@
     "qrcode": "^1.5.4",
     "react": "^18",
     "react-dom": "^18",
+    "recharts": "^3.8.1",
     "tailwindcss": "^3.4.4",
     "tsx": "^4.15.2",
     "twilio": "^5.2.2"
