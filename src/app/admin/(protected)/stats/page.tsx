@@ -460,7 +460,7 @@ export default function StatsPage() {
                           <YAxis tick={{ fontSize: 10, fill: "#d1d5db" }} axisLine={false} tickLine={false} allowDecimals={false} />
                           <Tooltip cursor={{ fill: "rgba(0,0,0,0.04)" }} contentStyle={{ borderRadius: 10, border: "none", boxShadow: "0 4px 20px rgba(0,0,0,0.1)", fontSize: 12 }} />
                           <Bar dataKey="count" name="Entrées" fill="url(#barGrad)" radius={[6, 6, 0, 0]} isAnimationActive={true} animationDuration={800} animationEasing="ease-out">
-                            <LabelList dataKey="count" position="top" style={{ fontSize: 10, fill: "#9ca3af", fontWeight: 500 }} formatter={(v: number) => v > 0 ? v : ""} />
+                            <LabelList dataKey="count" position="top" style={{ fontSize: 10, fill: "#9ca3af", fontWeight: 500 }} formatter={(v: unknown) => (typeof v === "number" && v > 0) ? v : ""} />
                           </Bar>
                         </BarChart>
                       </ResponsiveContainer>
