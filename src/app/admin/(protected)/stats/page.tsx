@@ -3,8 +3,8 @@
 import { useEffect, useState, useCallback } from "react";
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
-  PieChart, Pie, Cell, Legend,
-  LineChart, Line,
+  PieChart, Pie, Cell, Legend, LabelList,
+  AreaChart, Area,
 } from "recharts";
 
 // ── Types ─────────────────────────────────────────────────────────────────────
@@ -65,7 +65,6 @@ const CATEGORIES = [
   { value: "attente",  label: "Attente pièces" },
   { value: "rdv",      label: "RDV pris" },
   { value: "marque",   label: "Par marque" },
-  { value: "statut",   label: "Par statut" },
 ] as const;
 
 type CatValue = typeof CATEGORIES[number]["value"];
@@ -86,7 +85,6 @@ const CAT_CONFIG: Record<CatValue, CatConfig> = {
   attente:  { kpis: ["enAttentePieces"],                                                 charts: [],                                                        ticketFilter: (t) => t.statut === "ATTENTE_PIECES",                               showTickets: true  },
   rdv:      { kpis: ["rdvPeriode"],                                                      charts: [],                                                        ticketFilter: () => false,                                                         showTickets: false },
   marque:   { kpis: ["totalEntrees"],                                                    charts: ["parMarque"],                                             ticketFilter: () => true,                                                          showTickets: true  },
-  statut:   { kpis: ["totalEntrees"],                                                    charts: ["parStatut"],                                             ticketFilter: () => true,                                                          showTickets: true  },
 };
 
 // ── Date helpers ──────────────────────────────────────────────────────────────
@@ -118,7 +116,7 @@ function KpiCard({ label, value, unit, sub }: { label: string; value: string | n
 
 function Section({ title, children }: { title: string; children: React.ReactNode }) {
   return (
-    <div className="bg-white rounded-xl border border-gray-100 shadow-sm p-5">
+    <div className="bg-white rounded-2xl border border-gray-100 shadow-lg p-5">
       <h3 className="text-sm font-semibold text-gray-700 mb-4">{title}</h3>
       {children}
     </div>
@@ -443,13 +441,21 @@ export default function StatsPage() {
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
                   {showChart("parMois") && (
                     <Section title="Machines entrées par mois (12 derniers mois)">
-                      <ResponsiveContainer width="100%" height={220}>
-                        <BarChart data={data.parMois} margin={{ top: 4, right: 8, left: -20, bottom: 0 }}>
+                      <ResponsiveContainer width="100%" height={240}>
+                        <BarChart data={data.parMois} margin={{ top: 20, right: 8, left: -20, bottom: 0 }}>
+                          <defs>
+                            <linearGradient id="barGrad" x1="0" y1="0" x2="0" y2="1">
+                              <stop offset="0%" stopColor="#F47920" stopOpacity={1} />
+                              <stop offset="100%" stopColor="#FFB347" stopOpacity={1} />
+                            </linearGradient>
+                          </defs>
                           <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
                           <XAxis dataKey="month" tick={{ fontSize: 11 }} />
                           <YAxis tick={{ fontSize: 11 }} allowDecimals={false} />
                           <Tooltip />
-                          <Bar dataKey="count" name="Entrées" fill={BRAND_COLOR} radius={[4, 4, 0, 0]} />
+                          <Bar dataKey="count" name="Entrées" fill="url(#barGrad)" radius={[4, 4, 0, 0]}>
+                            <LabelList dataKey="count" position="top" style={{ fontSize: 10, fill: "#9ca3af" }} />
+                          </Bar>
                         </BarChart>
                       </ResponsiveContainer>
                     </Section>
@@ -458,20 +464,31 @@ export default function StatsPage() {
                     <Section title="Répartition par statut">
                       {data.parStatut.length === 0 ? (
                         <p className="text-sm text-gray-400 text-center py-16">Aucune donnée</p>
-                      ) : (
-                        <ResponsiveContainer width="100%" height={320}>
-                          <PieChart>
-                            <Pie data={data.parStatut.map((d) => ({ ...d, name: STATUT_LABELS[d.name] ?? d.name }))}
-                              cx="50%" cy="45%" outerRadius={80} dataKey="value"
-                              label={({ name, percent }) => `${name} ${Math.round((percent ?? 0) * 100)}%`}
-                              labelLine={true}>
-                              {data.parStatut.map((_, i) => <Cell key={i} fill={PIE_COLORS[i % PIE_COLORS.length]} />)}
-                            </Pie>
-                            <Tooltip formatter={(v, n) => [v, n]} />
-                            <Legend formatter={(v) => <span style={{ fontSize: 11 }}>{v}</span>} />
-                          </PieChart>
-                        </ResponsiveContainer>
-                      )}
+                      ) : (() => {
+                        const donutData = data.parStatut.map((d) => ({ ...d, name: STATUT_LABELS[d.name] ?? d.name }));
+                        const donutTotal = data.parStatut.reduce((s, d) => s + d.value, 0);
+                        return (
+                          <div className="relative">
+                            <ResponsiveContainer width="100%" height={300}>
+                              <PieChart>
+                                <Pie data={donutData} cx="50%" cy="50%"
+                                  innerRadius={60} outerRadius={90}
+                                  dataKey="value" paddingAngle={2}>
+                                  {donutData.map((_, i) => <Cell key={i} fill={PIE_COLORS[i % PIE_COLORS.length]} />)}
+                                </Pie>
+                                <Tooltip formatter={(v, n) => [v, n]} />
+                                <Legend formatter={(v) => <span style={{ fontSize: 11 }}>{v}</span>} />
+                              </PieChart>
+                            </ResponsiveContainer>
+                            <div className="absolute inset-0 flex items-center justify-center pointer-events-none" style={{ paddingBottom: "40px" }}>
+                              <div className="text-center">
+                                <p className="text-2xl font-bold text-gray-900">{donutTotal}</p>
+                                <p className="text-xs text-gray-400">tickets</p>
+                              </div>
+                            </div>
+                          </div>
+                        );
+                      })()}
                     </Section>
                   )}
                 </div>
@@ -485,12 +502,20 @@ export default function StatsPage() {
                         <p className="text-sm text-gray-400 text-center py-16">Aucune donnée</p>
                       ) : (
                         <ResponsiveContainer width="100%" height={220}>
-                          <BarChart data={data.parMarque} layout="vertical" margin={{ top: 4, right: 20, left: 40, bottom: 0 }}>
+                          <BarChart data={data.parMarque} layout="vertical" margin={{ top: 4, right: 40, left: 40, bottom: 0 }}>
+                            <defs>
+                              <linearGradient id="barGradH" x1="0" y1="0" x2="1" y2="0">
+                                <stop offset="0%" stopColor="#FFB347" stopOpacity={1} />
+                                <stop offset="100%" stopColor="#F47920" stopOpacity={1} />
+                              </linearGradient>
+                            </defs>
                             <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" horizontal={false} />
                             <XAxis type="number" tick={{ fontSize: 11 }} allowDecimals={false} />
                             <YAxis type="category" dataKey="name" tick={{ fontSize: 11 }} width={70} />
                             <Tooltip />
-                            <Bar dataKey="value" name="Tickets" fill={BRAND_COLOR} radius={[0, 4, 4, 0]} />
+                            <Bar dataKey="value" name="Tickets" fill="url(#barGradH)" radius={[0, 4, 4, 0]}>
+                              <LabelList dataKey="value" position="right" style={{ fontSize: 11, fill: "#9ca3af" }} />
+                            </Bar>
                           </BarChart>
                         </ResponsiveContainer>
                       )}
@@ -498,15 +523,24 @@ export default function StatsPage() {
                   )}
                   {showChart("evolution") && (
                     <Section title="Évolution mensuelle (24 derniers mois)">
-                      <ResponsiveContainer width="100%" height={220}>
-                        <LineChart data={data.evolution} margin={{ top: 4, right: 8, left: -20, bottom: 0 }}>
+                      <ResponsiveContainer width="100%" height={240}>
+                        <AreaChart data={data.evolution} margin={{ top: 10, right: 8, left: -20, bottom: 0 }}>
+                          <defs>
+                            <linearGradient id="areaGrad" x1="0" y1="0" x2="0" y2="1">
+                              <stop offset="5%" stopColor="#F47920" stopOpacity={0.3} />
+                              <stop offset="95%" stopColor="#F47920" stopOpacity={0} />
+                            </linearGradient>
+                          </defs>
                           <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
                           <XAxis dataKey="month" tick={{ fontSize: 10 }} interval={3} />
                           <YAxis tick={{ fontSize: 11 }} allowDecimals={false} />
                           <Tooltip />
-                          <Line type="monotone" dataKey="count" name="Entrées" stroke={BRAND_COLOR}
-                            strokeWidth={2} dot={false} activeDot={{ r: 4 }} />
-                        </LineChart>
+                          <Area type="monotone" dataKey="count" name="Entrées"
+                            stroke={BRAND_COLOR} strokeWidth={3}
+                            fill="url(#areaGrad)"
+                            dot={{ r: 3, fill: BRAND_COLOR, strokeWidth: 0 }}
+                            activeDot={{ r: 5 }} />
+                        </AreaChart>
                       </ResponsiveContainer>
                     </Section>
                   )}
