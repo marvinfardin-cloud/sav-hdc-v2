@@ -395,15 +395,15 @@ export default function StatsPage() {
               {data.parStatut.length === 0 ? (
                 <p className="text-sm text-gray-400 text-center py-16">Aucune donnée</p>
               ) : (
-                <ResponsiveContainer width="100%" height={220}>
+                <ResponsiveContainer width="100%" height={260}>
                   <PieChart>
                     <Pie
                       data={data.parStatut.map((d) => ({ ...d, name: STATUT_LABELS[d.name] ?? d.name }))}
                       cx="50%"
-                      cy="50%"
-                      outerRadius={80}
+                      cy="45%"
+                      outerRadius={70}
                       dataKey="value"
-                      label={({ name, percent }) => `${name} ${Math.round((percent ?? 0) * 100)}%`}
+                      label={({ percent }) => `${Math.round((percent ?? 0) * 100)}%`}
                       labelLine={false}
                     >
                       {data.parStatut.map((_, i) => (
