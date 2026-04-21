@@ -41,8 +41,10 @@ model Client {
   nom          String
   prenom       String
   telephone    String?
-  passwordHash String?
-  createdAt    DateTime     @default(now())
+  passwordHash      String?
+  resetToken        String?
+  resetTokenExpiry  DateTime?
+  createdAt         DateTime     @default(now())
   tickets      Ticket[]
   rdvs         RendezVous[]
   sessions     Session[]
