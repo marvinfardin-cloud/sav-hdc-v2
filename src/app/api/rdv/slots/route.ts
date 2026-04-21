@@ -15,7 +15,6 @@ function decimalToTime(decimal: number): string {
 export async function GET(request: NextRequest) {
   const { searchParams } = request.nextUrl;
   const dateStr = searchParams.get("date");
-  const type = searchParams.get("type");
 
   if (!dateStr) {
     return NextResponse.json(
@@ -33,20 +32,12 @@ export async function GET(request: NextRequest) {
   const [y, mo, d] = dateStr.split("-").map(Number);
   const dayOfWeek = new Date(y, mo - 1, d).getDay();
 
-  // No appointments on Sunday (0)
-  if (dayOfWeek === 0) {
+  // No appointments on Sunday (0) or Saturday (6)
+  if (dayOfWeek === 0 || dayOfWeek === 6) {
     return NextResponse.json({ slots: [] }, { headers: noCacheHeaders() });
   }
 
-  // Dépôt de matériel is closed on Saturday
-  if (type === "depot" && dayOfWeek === 6) {
-    return NextResponse.json({ slots: [] }, { headers: noCacheHeaders() });
-  }
-
-  // Saturday: morning only (for non-depot types)
-  const allSlots = dayOfWeek === 6
-    ? MORNING_SLOTS
-    : [...MORNING_SLOTS, ...AFTERNOON_SLOTS];
+  const allSlots = [...MORNING_SLOTS, ...AFTERNOON_SLOTS];
 
   const existingRdvs = await prisma.rendezVous.findMany({
     where: {

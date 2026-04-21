@@ -66,14 +66,14 @@ export default function RdvPage() {
   maxDate.setMonth(maxDate.getMonth() + 3);
   const maxDateStr = maxDate.toISOString().split("T")[0];
 
-  const isSaturdayDepot = selectedType === "depot" && (() => {
+  const isSaturday = (() => {
     if (!selectedDate) return false;
     const [y, mo, d] = selectedDate.split("-").map(Number);
     return new Date(y, mo - 1, d).getDay() === 6;
   })();
 
   useEffect(() => {
-    if (selectedDate && !isSaturdayDepot) {
+    if (selectedDate && !isSaturday) {
       setSlotsLoading(true);
       setSelectedTime("");
       fetch(`/api/rdv/slots?date=${selectedDate}&type=${selectedType}`)
@@ -84,7 +84,7 @@ export default function RdvPage() {
       setSlots([]);
       setSelectedTime("");
     }
-  }, [selectedDate, selectedType, isSaturdayDepot]);
+  }, [selectedDate, selectedType, isSaturday]);
 
   const handleConfirm = async () => {
     setError("");
@@ -217,17 +217,15 @@ export default function RdvPage() {
               max={maxDateStr}
               className="w-full sm:w-auto px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-navy-500"
             />
-            <p className="text-xs text-gray-400 mt-1">
-              {selectedType === "depot" ? "Fermé le dimanche et le samedi." : "Fermé le dimanche. Samedi : matin uniquement."}
-            </p>
+            <p className="text-xs text-gray-400 mt-1">Fermé le dimanche et le samedi.</p>
           </div>
 
           {selectedDate && (
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-3">Heure disponible</label>
-              {isSaturdayDepot ? (
+              {isSaturday ? (
                 <p className="text-sm text-amber-700 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2">
-                  Fermé le samedi pour les dépôts de matériel.
+                  Le SAV est fermé le samedi. Veuillez choisir un autre jour.
                 </p>
               ) : slotsLoading ? (
                 <div className="flex items-center gap-2 text-gray-400 text-sm">
