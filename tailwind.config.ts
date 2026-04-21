@@ -21,6 +21,18 @@ const config: Config = {
           800: "#162d4a",
           900: "#0e1f35",
         },
+        stihl: {
+          50: "#FFF8F2",
+          100: "#FFE8CC",
+          200: "#FFCF99",
+          300: "#FFB566",
+          400: "#FF9A3D",
+          500: "#F47920",
+          600: "#D96A18",
+          700: "#C05A10",
+          800: "#A04A0A",
+          900: "#7A3507",
+        },
       },
       fontFamily: {
         sans: ["Inter", "system-ui", "sans-serif"],

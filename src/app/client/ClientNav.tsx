@@ -16,15 +16,14 @@ export default function ClientNav({ clientName }: { clientName: string }) {
   };
 
   return (
-    <header className="bg-navy-700 shadow-sm sticky top-0 z-20">
+    <header className="shadow-sm sticky top-0 z-20" style={{ backgroundColor: "#F47920" }}>
       <div className="max-w-4xl mx-auto px-4">
         <div className="flex items-center justify-between h-14 sm:h-16">
           {/* Logo */}
           <Link href="/client/dashboard" className="flex items-center gap-2.5 min-h-[44px]">
-            <div className="w-8 h-8 bg-white/10 rounded-lg flex items-center justify-center flex-shrink-0">
-              <svg className="w-4 h-4 text-white" fill="currentColor" viewBox="0 0 24 24">
-                <path d="M17.66 7.93L12 2.27 6.34 7.93c-3.12 3.12-3.12 8.19 0 11.31C7.9 20.8 9.95 21.58 12 21.58c2.05 0 4.1-.78 5.66-2.34 3.12-3.12 3.12-8.19 0-11.31zM12 19.59c-1.6 0-3.11-.62-4.24-1.76C6.62 16.69 6 15.19 6 13.59s.62-3.11 1.76-4.24L12 5.1v14.49z"/>
-              </svg>
+            <div className="w-8 h-8 bg-white/20 rounded-lg flex items-center justify-center flex-shrink-0">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img src="/logo.png" className="w-6 h-6 object-contain" alt="JardiPro" />
             </div>
             <span className="text-white font-semibold text-sm hidden sm:block">Les Hauts de Californie</span>
           </Link>
@@ -36,7 +35,7 @@ export default function ClientNav({ clientName }: { clientName: string }) {
               className={`px-3 py-2.5 rounded-lg text-sm font-medium transition-colors min-h-[44px] flex items-center ${
                 pathname === "/client/dashboard"
                   ? "bg-white/10 text-white"
-                  : "text-navy-200 hover:bg-white/5 hover:text-white"
+                  : "text-white/70 hover:bg-white/5 hover:text-white"
               }`}
             >
               Mes tickets
@@ -46,7 +45,7 @@ export default function ClientNav({ clientName }: { clientName: string }) {
               className={`px-3 py-2.5 rounded-lg text-sm font-medium transition-colors min-h-[44px] flex items-center ${
                 pathname === "/client/rdv"
                   ? "bg-white/10 text-white"
-                  : "text-navy-200 hover:bg-white/5 hover:text-white"
+                  : "text-white/70 hover:bg-white/5 hover:text-white"
               }`}
             >
               Prendre RDV
@@ -55,11 +54,11 @@ export default function ClientNav({ clientName }: { clientName: string }) {
 
           {/* User */}
           <div className="flex items-center gap-2">
-            <span className="text-navy-200 text-sm hidden sm:block truncate max-w-32">{clientName}</span>
+            <span className="text-white/70 text-sm hidden sm:block truncate max-w-32">{clientName}</span>
             <button
               onClick={handleLogout}
               disabled={loggingOut}
-              className="p-2 text-navy-300 hover:text-white hover:bg-white/5 rounded-lg transition-colors min-w-[44px] min-h-[44px] flex items-center justify-center"
+              className="p-2 text-white/60 hover:text-white hover:bg-white/5 rounded-lg transition-colors min-w-[44px] min-h-[44px] flex items-center justify-center"
               title="Se déconnecter"
             >
               <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
