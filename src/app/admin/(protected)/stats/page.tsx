@@ -3,8 +3,7 @@
 import { useEffect, useState, useCallback } from "react";
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
-  PieChart, Pie, Cell, Legend, LabelList,
-  AreaChart, Area,
+  LabelList, AreaChart, Area,
 } from "recharts";
 
 // ── Types ─────────────────────────────────────────────────────────────────────
@@ -53,7 +52,14 @@ const STATUT_LABELS: Record<string, string> = {
   LIVRE: "Livré",
 };
 
-const PIE_COLORS = ["#6366f1", "#f59e0b", "#F47920", "#8b5cf6", "#22c55e", "#94a3b8"];
+const STATUT_COLORS: Record<string, string> = {
+  RECU:          "#F47920",
+  DIAGNOSTIC:    "#8B5CF6",
+  ATTENTE_PIECES:"#6B7280",
+  EN_REPARATION: "#3B82F6",
+  PRET:          "#F59E0B",
+  LIVRE:         "#10B981",
+};
 const BRAND_COLOR = "#F47920";
 
 const CATEGORIES = [
@@ -465,27 +471,33 @@ export default function StatsPage() {
                       {data.parStatut.length === 0 ? (
                         <p className="text-sm text-gray-400 text-center py-16">Aucune donnée</p>
                       ) : (() => {
-                        const donutData = data.parStatut.map((d) => ({ ...d, name: STATUT_LABELS[d.name] ?? d.name }));
-                        const donutTotal = data.parStatut.reduce((s, d) => s + d.value, 0);
+                        const total = data.parStatut.reduce((s, d) => s + d.value, 0);
+                        const ORDER = ["RECU","DIAGNOSTIC","ATTENTE_PIECES","EN_REPARATION","PRET","LIVRE"];
+                        const sorted = ORDER
+                          .map((key) => data.parStatut.find((d) => d.name === key))
+                          .filter(Boolean) as { name: string; value: number }[];
                         return (
-                          <div className="relative">
-                            <ResponsiveContainer width="100%" height={300}>
-                              <PieChart>
-                                <Pie data={donutData} cx="50%" cy="50%"
-                                  innerRadius={60} outerRadius={90}
-                                  dataKey="value" paddingAngle={2}>
-                                  {donutData.map((_, i) => <Cell key={i} fill={PIE_COLORS[i % PIE_COLORS.length]} />)}
-                                </Pie>
-                                <Tooltip formatter={(v, n) => [v, n]} />
-                                <Legend formatter={(v) => <span style={{ fontSize: 11 }}>{v}</span>} />
-                              </PieChart>
-                            </ResponsiveContainer>
-                            <div className="absolute inset-0 flex items-center justify-center pointer-events-none" style={{ paddingBottom: "40px" }}>
-                              <div className="text-center">
-                                <p className="text-2xl font-bold text-gray-900">{donutTotal}</p>
-                                <p className="text-xs text-gray-400">tickets</p>
-                              </div>
-                            </div>
+                          <div className="grid grid-cols-2 gap-3">
+                            {sorted.map((d) => {
+                              const color = STATUT_COLORS[d.name] ?? "#94a3b8";
+                              const pct = total > 0 ? Math.round((d.value / total) * 100) : 0;
+                              return (
+                                <div key={d.name} className="rounded-2xl shadow-md bg-white p-4 border-l-4 flex flex-col gap-2"
+                                  style={{ borderLeftColor: color }}>
+                                  <div className="flex items-center gap-2">
+                                    <span className="w-2.5 h-2.5 rounded-full flex-shrink-0" style={{ backgroundColor: color }} />
+                                    <span className="text-xs font-medium text-gray-500 truncate">{STATUT_LABELS[d.name] ?? d.name}</span>
+                                  </div>
+                                  <p className="text-3xl font-bold text-gray-900 leading-none">{d.value}</p>
+                                  <div className="space-y-1">
+                                    <div className="w-full h-1.5 bg-gray-100 rounded-full overflow-hidden">
+                                      <div className="h-full rounded-full transition-all" style={{ width: `${pct}%`, backgroundColor: color }} />
+                                    </div>
+                                    <p className="text-xs text-gray-400">{pct}%</p>
+                                  </div>
+                                </div>
+                              );
+                            })}
                           </div>
                         );
                       })()}
