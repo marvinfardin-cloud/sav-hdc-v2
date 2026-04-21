@@ -336,7 +336,7 @@ export default function ClientDashboard() {
                 <button
                   type="submit"
                   disabled={submitting}
-                  className="flex-1 bg-green-600 text-white px-4 py-3 rounded-lg text-sm font-medium hover:bg-green-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 min-h-[44px]"
+                  className="flex-1 text-white px-4 py-3 rounded-lg text-sm font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 min-h-[44px]" style={{ backgroundColor: "#F47920" }}
                 >
                   {submitting ? (
                     <>
