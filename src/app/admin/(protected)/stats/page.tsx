@@ -448,19 +448,19 @@ export default function StatsPage() {
                   {showChart("parMois") && (
                     <Section title="Machines entrées par mois (12 derniers mois)">
                       <ResponsiveContainer width="100%" height={240}>
-                        <BarChart data={data.parMois} margin={{ top: 20, right: 8, left: -20, bottom: 0 }}>
+                        <BarChart data={data.parMois} margin={{ top: 22, right: 8, left: -24, bottom: 0 }} barCategoryGap="30%">
                           <defs>
                             <linearGradient id="barGrad" x1="0" y1="0" x2="0" y2="1">
                               <stop offset="0%" stopColor="#F47920" stopOpacity={1} />
                               <stop offset="100%" stopColor="#FFB347" stopOpacity={1} />
                             </linearGradient>
                           </defs>
-                          <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
-                          <XAxis dataKey="month" tick={{ fontSize: 11 }} />
-                          <YAxis tick={{ fontSize: 11 }} allowDecimals={false} />
-                          <Tooltip />
-                          <Bar dataKey="count" name="Entrées" fill="url(#barGrad)" radius={[4, 4, 0, 0]}>
-                            <LabelList dataKey="count" position="top" style={{ fontSize: 10, fill: "#9ca3af" }} />
+                          <CartesianGrid strokeDasharray="3 3" stroke="#f3f4f6" vertical={false} />
+                          <XAxis dataKey="month" tick={{ fontSize: 10, fill: "#9ca3af" }} axisLine={false} tickLine={false} />
+                          <YAxis tick={{ fontSize: 10, fill: "#d1d5db" }} axisLine={false} tickLine={false} allowDecimals={false} />
+                          <Tooltip cursor={{ fill: "rgba(0,0,0,0.04)" }} contentStyle={{ borderRadius: 10, border: "none", boxShadow: "0 4px 20px rgba(0,0,0,0.1)", fontSize: 12 }} />
+                          <Bar dataKey="count" name="Entrées" fill="url(#barGrad)" radius={[6, 6, 0, 0]} isAnimationActive={true} animationDuration={800} animationEasing="ease-out">
+                            <LabelList dataKey="count" position="top" style={{ fontSize: 10, fill: "#9ca3af", fontWeight: 500 }} formatter={(v: number) => v > 0 ? v : ""} />
                           </Bar>
                         </BarChart>
                       </ResponsiveContainer>
@@ -510,27 +510,33 @@ export default function StatsPage() {
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
                   {showChart("parMarque") && (
                     <Section title="Répartition par marque">
-                      {data.parMarque.length === 0 ? (
+                      {data.parMarque.filter((d) => d.value > 0).length === 0 ? (
                         <p className="text-sm text-gray-400 text-center py-16">Aucune donnée</p>
-                      ) : (
-                        <ResponsiveContainer width="100%" height={220}>
-                          <BarChart data={data.parMarque} layout="vertical" margin={{ top: 4, right: 40, left: 40, bottom: 0 }}>
-                            <defs>
-                              <linearGradient id="barGradH" x1="0" y1="0" x2="1" y2="0">
-                                <stop offset="0%" stopColor="#FFB347" stopOpacity={1} />
-                                <stop offset="100%" stopColor="#F47920" stopOpacity={1} />
-                              </linearGradient>
-                            </defs>
-                            <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" horizontal={false} />
-                            <XAxis type="number" tick={{ fontSize: 11 }} allowDecimals={false} />
-                            <YAxis type="category" dataKey="name" tick={{ fontSize: 11 }} width={70} />
-                            <Tooltip />
-                            <Bar dataKey="value" name="Tickets" fill="url(#barGradH)" radius={[0, 4, 4, 0]}>
-                              <LabelList dataKey="value" position="right" style={{ fontSize: 11, fill: "#9ca3af" }} />
-                            </Bar>
-                          </BarChart>
-                        </ResponsiveContainer>
-                      )}
+                      ) : (() => {
+                        const brands = data.parMarque.filter((d) => d.value > 0);
+                        const total = brands.reduce((s, d) => s + d.value, 0);
+                        return (
+                          <div className="space-y-3">
+                            {brands.map((d) => {
+                              const pct = total > 0 ? Math.round((d.value / total) * 100) : 0;
+                              return (
+                                <div key={d.name} className="rounded-2xl shadow-md bg-white px-4 py-3 border-l-4 flex flex-col gap-2"
+                                  style={{ borderLeftColor: "#F47920" }}>
+                                  <div className="flex items-center justify-between">
+                                    <span className="text-sm font-bold text-gray-800">{d.name}</span>
+                                    <span className="text-2xl font-bold text-gray-900">{d.value}</span>
+                                  </div>
+                                  <div className="w-full h-1.5 bg-gray-100 rounded-full overflow-hidden">
+                                    <div className="h-full rounded-full transition-all"
+                                      style={{ width: `${pct}%`, background: "linear-gradient(to right, #FFB347, #F47920)" }} />
+                                  </div>
+                                  <p className="text-xs text-gray-400">{pct}%</p>
+                                </div>
+                              );
+                            })}
+                          </div>
+                        );
+                      })()}
                     </Section>
                   )}
                   {showChart("evolution") && (
