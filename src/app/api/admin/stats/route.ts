@@ -110,10 +110,10 @@ export async function GET(request: NextRequest) {
   const parStatut = Object.entries(statutMap).map(([name, value]) => ({ name, value }));
 
   // Par marque (period)
+  const KNOWN_BRANDS = new Set(["STIHL", "BUGNOT", "GTS", "KIVA", "OREC", "RAPID"]);
   const marqueMap: Record<string, number> = {};
   for (const t of tickets) {
-    const raw = t.marque?.trim() || "Autre";
-    const m = raw.charAt(0).toUpperCase() + raw.slice(1).toLowerCase();
+    const m = KNOWN_BRANDS.has(t.marque?.toUpperCase().trim()) ? t.marque.toUpperCase().trim() : "Autre";
     marqueMap[m] = (marqueMap[m] || 0) + 1;
   }
   const parMarque = Object.entries(marqueMap)

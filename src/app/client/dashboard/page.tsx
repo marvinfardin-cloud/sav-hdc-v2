@@ -267,15 +267,18 @@ export default function ClientDashboard() {
                   <label className="block text-sm font-medium text-gray-700 mb-1">
                     Marque <span className="text-red-500">*</span>
                   </label>
-                  <input
-                    type="text"
+                  <select
                     name="marque"
                     value={form.marque}
                     onChange={handleFormChange}
                     required
-                    placeholder="ex: Honda, Stihl..."
-                    className="w-full px-3 py-2.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-navy-500 focus:border-navy-500 transition-colors"
-                  />
+                    className="w-full px-3 py-2.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-stihl-500 focus:border-stihl-500 transition-colors bg-white"
+                  >
+                    <option value="">Sélectionner...</option>
+                    {["STIHL", "BUGNOT", "GTS", "KIVA", "OREC", "RAPID"].map((b) => (
+                      <option key={b} value={b}>{b}</option>
+                    ))}
+                  </select>
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">
