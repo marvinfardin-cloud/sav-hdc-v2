@@ -98,7 +98,7 @@ export default function AdminLoginPage() {
             <button
               type="submit"
               disabled={loading}
-              className="w-full bg-navy-700 text-white py-3 px-4 rounded-lg font-medium text-base hover:bg-navy-800 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 mt-2 min-h-[44px]"
+              className="w-full text-white py-3 px-4 rounded-lg font-medium text-base transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 mt-2 min-h-[44px]" style={{ backgroundColor: "#F47920" }}
             >
               {loading ? (
                 <>

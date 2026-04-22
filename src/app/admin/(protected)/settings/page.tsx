@@ -147,7 +147,7 @@ export default function SettingsPage() {
           <button
             type="submit"
             disabled={emailLoading}
-            className="w-full bg-navy-700 text-white py-2.5 px-4 rounded-lg text-sm font-medium hover:bg-navy-800 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 min-h-[44px]"
+            className="w-full text-white py-2.5 px-4 rounded-lg text-sm font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 min-h-[44px]" style={{ backgroundColor: "#F47920" }}
           >
             {emailLoading ? (
               <>
@@ -217,7 +217,7 @@ export default function SettingsPage() {
           <button
             type="submit"
             disabled={pwLoading}
-            className="w-full bg-navy-700 text-white py-2.5 px-4 rounded-lg text-sm font-medium hover:bg-navy-800 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 min-h-[44px]"
+            className="w-full text-white py-2.5 px-4 rounded-lg text-sm font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 min-h-[44px]" style={{ backgroundColor: "#F47920" }}
           >
             {pwLoading ? (
               <>
