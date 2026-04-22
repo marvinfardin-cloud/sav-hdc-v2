@@ -63,43 +63,45 @@ export async function GET(request: NextRequest) {
   const fromDate = new Date(`${from}T00:00:00-04:00`);
   const toDate   = new Date(`${to}T23:59:59.999-04:00`);
 
-  const [tickets, rdvPeriode, enAttentePieces, allTickets24] = await Promise.all([
+  const [tickets, rdvPeriode, enAttentePieces, allTickets24, livreHistos] = await Promise.all([
+    // Tickets created (entrées) in the period
     prisma.ticket.findMany({
       where: { createdAt: { gte: fromDate, lte: toDate } },
-      include: {
-        client: { select: { nom: true, prenom: true } },
-        historique: {
-          where: { statut: "LIVRE" },
-          orderBy: { createdAt: "asc" },
-          take: 1,
-        },
-      },
+      include: { client: { select: { nom: true, prenom: true } } },
       orderBy: { createdAt: "asc" },
     }),
     prisma.rendezVous.count({ where: { dateHeure: { gte: fromDate, lte: toDate } } }),
     prisma.ticket.count({ where: { statut: "ATTENTE_PIECES" } }),
     // all tickets in last 24 months for rolling charts
     prisma.ticket.findMany({
-      where: {
-        createdAt: {
-          gte: new Date(new Date().getFullYear(), new Date().getMonth() - 23, 1),
-        },
-      },
+      where: { createdAt: { gte: new Date(new Date().getFullYear(), new Date().getMonth() - 23, 1) } },
       select: { createdAt: true },
+    }),
+    // Historique entries where status changed to LIVRE in the period
+    prisma.historique.findMany({
+      where: { statut: "LIVRE", createdAt: { gte: fromDate, lte: toDate } },
+      select: { ticketId: true, createdAt: true, ticket: { select: { createdAt: true } } },
+      orderBy: { createdAt: "asc" },
     }),
   ]);
 
   // KPIs
   const totalEntrees = tickets.length;
-  const livres = tickets.filter((t) => t.statut === "LIVRE");
-  const totalRepares = livres.length;
-  const tauxReparation = totalEntrees > 0 ? Math.round((totalRepares / totalEntrees) * 100) : 0;
 
-  const livresAvecDate = livres.filter((t) => t.historique.length > 0);
-  const machinesSorties = livresAvecDate.length;
+  // Deduplicate by ticketId — keep first LIVRE event per ticket within the period
+  const livreByTicket = new Map<string, { entree: Date; sortie: Date }>();
+  for (const h of livreHistos) {
+    if (!livreByTicket.has(h.ticketId)) {
+      livreByTicket.set(h.ticketId, { entree: h.ticket.createdAt, sortie: h.createdAt });
+    }
+  }
+  const totalRepares    = livreByTicket.size;
+  const machinesSorties = livreByTicket.size;
+  const tauxReparation  = totalEntrees > 0 ? Math.round((totalRepares / totalEntrees) * 100) : 0;
 
-  const delais = livresAvecDate
-    .map((t) => Math.abs(t.historique[0].createdAt.getTime() - t.createdAt.getTime()) / 86400000);
+  const delais = Array.from(livreByTicket.values()).map(
+    ({ entree, sortie }) => (sortie.getTime() - entree.getTime()) / 86400000
+  );
   const delaiMoyen = delais.length > 0
     ? Math.round(delais.reduce((a, b) => a + b, 0) / delais.length)
     : 0;
@@ -143,7 +145,7 @@ export async function GET(request: NextRequest) {
 
   // Full ticket list for export
   const ticketsList = tickets.map((t) => {
-    const dateLivraison = t.historique[0]?.createdAt ?? null;
+    const dateLivraison = livreByTicket.get(t.id)?.sortie ?? null;
     const delai = dateLivraison
       ? Math.round((dateLivraison.getTime() - t.createdAt.getTime()) / 86400000)
       : null;

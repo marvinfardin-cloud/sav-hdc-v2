@@ -95,10 +95,16 @@ const CAT_CONFIG: Record<CatValue, CatConfig> = {
 
 // ── Date helpers ──────────────────────────────────────────────────────────────
 
-function today()        { return new Date().toISOString().split("T")[0]; }
-function mondayOfWeek() { const d = new Date(); const day = d.getDay() || 7; d.setDate(d.getDate() - day + 1); return d.toISOString().split("T")[0]; }
-function firstOfMonth() { const d = new Date(); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-01`; }
-function firstOfYear()  { return `${new Date().getFullYear()}-01-01`; }
+function today()        { return new Date().toLocaleDateString("en-CA", { timeZone: "America/Martinique" }); }
+function mondayOfWeek() {
+  const mtn = new Date().toLocaleDateString("en-CA", { timeZone: "America/Martinique" });
+  const d = new Date(mtn + "T12:00:00");
+  const day = d.getDay() || 7;
+  d.setDate(d.getDate() - day + 1);
+  return d.toLocaleDateString("en-CA");
+}
+function firstOfMonth() { return today().slice(0, 7) + "-01"; }
+function firstOfYear()  { return today().slice(0, 4) + "-01-01"; }
 
 const PRESETS = [
   { label: "Cette semaine", from: mondayOfWeek, to: today },
