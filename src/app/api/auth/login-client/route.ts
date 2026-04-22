@@ -15,7 +15,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const client = await prisma.client.findUnique({ where: { email } });
+    const client = await prisma.client.findUnique({ where: { email: email.toLowerCase().trim() } });
     if (!client || !client.passwordHash) {
       return NextResponse.json(
         { error: "Email ou mot de passe incorrect" },

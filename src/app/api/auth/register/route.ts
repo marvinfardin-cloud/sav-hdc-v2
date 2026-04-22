@@ -22,19 +22,34 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const existing = await prisma.client.findUnique({ where: { email } });
+    const normalizedEmail = email.toLowerCase().trim();
+    const existing = await prisma.client.findUnique({ where: { email: normalizedEmail } });
+
     if (existing) {
-      return NextResponse.json(
-        { error: "Un compte avec cet email existe déjà" },
-        { status: 409, headers: noCacheHeaders() }
-      );
+      if (existing.passwordHash) {
+        // Client already registered with a password → true duplicate
+        return NextResponse.json(
+          { error: "Cet email est déjà utilisé" },
+          { status: 409, headers: noCacheHeaders() }
+        );
+      }
+      // Client was pre-created by admin (no password yet) → complete registration
+      const passwordHash = await bcrypt.hash(password, 12);
+      const updated = await prisma.client.update({
+        where: { id: existing.id },
+        data: { passwordHash, nom, prenom, telephone },
+      });
+      const { jwt, expiresAt } = await createClientSession(updated.id);
+      const response = NextResponse.json({ success: true }, { status: 200, headers: noCacheHeaders() });
+      setClientCookie(response, jwt, expiresAt);
+      return response;
     }
 
     const passwordHash = await bcrypt.hash(password, 12);
 
     const client = await prisma.client.create({
       data: {
-        email,
+        email: normalizedEmail,
         nom,
         prenom,
         telephone,

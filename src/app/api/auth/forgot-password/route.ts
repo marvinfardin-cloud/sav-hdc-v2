@@ -15,7 +15,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const client = await prisma.client.findUnique({ where: { email } });
+    const client = await prisma.client.findUnique({ where: { email: email.toLowerCase().trim() } });
 
     // Always return 200 to avoid leaking whether an account exists
     if (!client || !client.passwordHash) {
