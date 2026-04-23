@@ -7,8 +7,9 @@ export async function GET() {
   if (!session?.client) {
     return NextResponse.json({ error: "Non autorisé" }, { status: 401, headers: noCacheHeaders() });
   }
+  const { prenom, nom, email, telephone } = session.client;
   return NextResponse.json(
-    { prenom: session.client.prenom, nom: session.client.nom },
+    { prenom, nom, email, telephone },
     { headers: noCacheHeaders() }
   );
 }
