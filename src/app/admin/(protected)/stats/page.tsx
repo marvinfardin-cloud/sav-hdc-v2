@@ -491,13 +491,14 @@ async function exportPdf(tickets: TicketRow[], kpis: Kpis, from: string, to: str
 const darkTooltip = {
   contentStyle: {
     backgroundColor: "#161616",
-    border: "1px solid #1f1f1f",
+    border: "1px solid #2a2a2a",
     borderRadius: 8,
-    boxShadow: "0 8px 32px rgba(0,0,0,0.5)",
+    boxShadow: "0 8px 32px rgba(0,0,0,0.6)",
     fontSize: 12,
-    color: "#fff",
+    color: "#ffffff",
   },
-  labelStyle: { color: "#71717a" },
+  labelStyle: { color: "#a1a1aa" },
+  itemStyle: { color: "#ffffff" },
   cursor: { fill: "rgba(255,255,255,0.03)" },
 };
 
@@ -743,12 +744,12 @@ export default function StatsPage() {
                           <CartesianGrid strokeDasharray="3 3" stroke="#1a1a1a" vertical={false} />
                           <XAxis
                             dataKey="month"
-                            tick={{ fontSize: 10, fill: "#52525b" }}
+                            tick={{ fontSize: 10, fill: "#a1a1aa" }}
                             axisLine={false}
                             tickLine={false}
                           />
                           <YAxis
-                            tick={{ fontSize: 10, fill: "#3f3f46" }}
+                            tick={{ fontSize: 10, fill: "#71717a" }}
                             axisLine={false}
                             tickLine={false}
                             allowDecimals={false}
@@ -776,7 +777,7 @@ export default function StatsPage() {
                             <LabelList
                               dataKey="count"
                               position="top"
-                              style={{ fontSize: 9, fill: "#52525b", fontWeight: 500 }}
+                              style={{ fontSize: 9, fill: "#71717a", fontWeight: 500 }}
                               formatter={(v: unknown) => (typeof v === "number" && v > 0) ? `${v}${meta.unit}` : ""}
                             />
                           </Bar>
@@ -816,13 +817,13 @@ export default function StatsPage() {
                       <CartesianGrid strokeDasharray="3 3" stroke="#1a1a1a" vertical={false} />
                       <XAxis
                         dataKey="month"
-                        tick={{ fontSize: 10, fill: "#52525b" }}
+                        tick={{ fontSize: 10, fill: "#a1a1aa" }}
                         axisLine={false}
                         tickLine={false}
                         interval={3}
                       />
                       <YAxis
-                        tick={{ fontSize: 10, fill: "#3f3f46" }}
+                        tick={{ fontSize: 10, fill: "#71717a" }}
                         axisLine={false}
                         tickLine={false}
                         allowDecimals={false}
