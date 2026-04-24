@@ -3,7 +3,7 @@
 import { useEffect, useState, useCallback } from "react";
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
-  LabelList, AreaChart, Area,
+  LabelList, AreaChart, Area, LineChart, Line, Cell,
 } from "recharts";
 
 // ── Types ─────────────────────────────────────────────────────────────────────
@@ -46,23 +46,38 @@ interface StatsData {
 // ── Constants ─────────────────────────────────────────────────────────────────
 
 const STATUT_LABELS: Record<string, string> = {
-  RECU: "Reçu",
-  DIAGNOSTIC: "En diagnostic",
+  RECU:           "Reçu",
+  DIAGNOSTIC:     "En diagnostic",
   ATTENTE_PIECES: "Attente pièces",
-  EN_REPARATION: "En réparation",
-  PRET: "Prêt",
-  LIVRE: "Livré",
+  EN_REPARATION:  "En réparation",
+  PRET:           "Prêt",
+  LIVRE:          "Livré",
 };
 
 const STATUT_COLORS: Record<string, string> = {
-  RECU:          "#F47920",
-  DIAGNOSTIC:    "#8B5CF6",
-  ATTENTE_PIECES:"#6B7280",
-  EN_REPARATION: "#3B82F6",
-  PRET:          "#F59E0B",
-  LIVRE:         "#10B981",
+  RECU:           "#F47920",
+  DIAGNOSTIC:     "#8B5CF6",
+  ATTENTE_PIECES: "#6B7280",
+  EN_REPARATION:  "#3B82F6",
+  PRET:           "#F59E0B",
+  LIVRE:          "#10B981",
 };
-const BRAND_COLOR = "#F47920";
+
+const BRAND_COLORS: Record<string, string> = {
+  STIHL:     "#F47920",
+  VIKING:    "#3b82f6",
+  HONDA:     "#22c55e",
+  HUSQVARNA: "#eab308",
+  BUGNOT:    "#8b5cf6",
+  GTS:       "#06b6d4",
+  KIVA:      "#f43f5e",
+  OREC:      "#a78bfa",
+  RAPID:     "#34d399",
+  AUTRE:     "#6b7280",
+};
+
+const getBrandColor = (name: string) =>
+  BRAND_COLORS[name.toUpperCase()] ?? "#6b7280";
 
 const CATEGORIES = [
   { value: "all",      label: "Toutes les stats" },
@@ -85,14 +100,14 @@ interface CatConfig {
 }
 
 const CAT_CONFIG: Record<CatValue, CatConfig> = {
-  all:      { kpis: ["all"], charts: ["parMois", "parStatut", "parMarque", "evolution"], ticketFilter: () => true,                                         showTickets: true  },
-  entrees:  { kpis: ["totalEntrees"],                                                    charts: ["parMois", "evolution"],                                  ticketFilter: () => true,                                                          showTickets: true  },
-  reparees: { kpis: ["totalRepares", "tauxReparation", "delaiMoyen"],                   charts: ["parMois", "parStatut"],                                  ticketFilter: (t) => t.statut === "LIVRE",                                         showTickets: true  },
-  sorties:  { kpis: ["machinesSorties"],                                                 charts: ["parMois"],                                               ticketFilter: (t) => t.statut === "LIVRE" && t.dateLivraison !== null,            showTickets: true  },
-  taux:     { kpis: ["totalEntrees", "totalRepares", "tauxReparation"],                 charts: ["parMois", "parStatut"],                                  ticketFilter: () => true,                                                          showTickets: false },
-  attente:  { kpis: ["enAttentePieces"],                                                 charts: [],                                                        ticketFilter: (t) => t.statut === "ATTENTE_PIECES",                               showTickets: true  },
-  rdv:      { kpis: ["rdvPeriode"],                                                      charts: [],                                                        ticketFilter: () => false,                                                         showTickets: false },
-  marque:   { kpis: ["totalEntrees"],                                                    charts: ["parMarque"],                                             ticketFilter: () => true,                                                          showTickets: true  },
+  all:      { kpis: ["all"], charts: ["parMois", "parStatut", "parMarque", "evolution"], ticketFilter: () => true,                                      showTickets: true  },
+  entrees:  { kpis: ["totalEntrees"],                                                    charts: ["parMois", "evolution"],                               ticketFilter: () => true,                                                   showTickets: true  },
+  reparees: { kpis: ["totalRepares", "tauxReparation", "delaiMoyen"],                   charts: ["parMois", "parStatut"],                               ticketFilter: (t) => t.statut === "LIVRE",                                  showTickets: true  },
+  sorties:  { kpis: ["machinesSorties"],                                                 charts: ["parMois"],                                            ticketFilter: (t) => t.statut === "LIVRE" && t.dateLivraison !== null,     showTickets: true  },
+  taux:     { kpis: ["totalEntrees", "totalRepares", "tauxReparation"],                 charts: ["parMois", "parStatut"],                               ticketFilter: () => true,                                                   showTickets: false },
+  attente:  { kpis: ["enAttentePieces"],                                                 charts: [],                                                     ticketFilter: (t) => t.statut === "ATTENTE_PIECES",                        showTickets: true  },
+  rdv:      { kpis: ["rdvPeriode"],                                                      charts: [],                                                     ticketFilter: () => false,                                                  showTickets: false },
+  marque:   { kpis: ["totalEntrees"],                                                    charts: ["parMarque"],                                          ticketFilter: () => true,                                                   showTickets: true  },
 };
 
 // ── Date helpers ──────────────────────────────────────────────────────────────
@@ -114,28 +129,100 @@ const PRESETS = [
   { label: "Cette année",   from: firstOfYear,  to: today },
 ] as const;
 
-// ── Small components ──────────────────────────────────────────────────────────
+// ── Trend helper ──────────────────────────────────────────────────────────────
 
-function KpiCard({ label, value, unit, sub }: { label: string; value: string | number; unit?: string; sub?: string }) {
+function computeTrend(series: ChartPoint[]): number | null {
+  if (series.length < 2) return null;
+  const cur  = series[series.length - 1].count;
+  const prev = series[series.length - 2].count;
+  if (prev === 0) return cur > 0 ? 100 : null;
+  return Math.round(((cur - prev) / prev) * 100);
+}
+
+// ── Bar chart metadata per category ──────────────────────────────────────────
+
+function getParMoisMeta(cat: CatValue, data: StatsData) {
+  switch (cat) {
+    case "sorties":
+      return { title: "Machines sorties · 12 mois", chartData: data.parMoisSorties, name: "Sorties", unit: "" };
+    case "reparees":
+      return { title: "Machines réparées · 12 mois", chartData: data.parMoisSorties, name: "Réparées", unit: "" };
+    case "taux":
+      return { title: "Taux de réparation · 12 mois", chartData: data.parMoisTaux, name: "Taux", unit: "%" };
+    default:
+      return { title: "Machines entrées · 12 mois", chartData: data.parMois, name: "Entrées", unit: "" };
+  }
+}
+
+// ── SparkLine ─────────────────────────────────────────────────────────────────
+
+function SparkLine({ data, positive }: { data: number[]; positive: boolean }) {
+  const points = data.map((count, i) => ({ i, count }));
+  const color = positive ? "#F47920" : "#ef4444";
   return (
-    <div className="bg-white rounded-xl border border-gray-100 shadow-sm p-5">
-      <p className="text-xs font-medium text-gray-500 uppercase tracking-wide mb-1">{label}</p>
-      <p className="text-3xl font-bold text-gray-900">
-        {value}<span className="text-lg font-medium text-gray-400 ml-1">{unit}</span>
+    <ResponsiveContainer width="100%" height={36}>
+      <LineChart data={points} margin={{ top: 2, right: 2, left: 2, bottom: 2 }}>
+        <Line
+          type="monotone"
+          dataKey="count"
+          stroke={color}
+          strokeWidth={1.5}
+          dot={false}
+          isAnimationActive={false}
+        />
+      </LineChart>
+    </ResponsiveContainer>
+  );
+}
+
+// ── KPI Card ──────────────────────────────────────────────────────────────────
+
+function KpiCard({
+  label, value, unit, sub, sparkData, trend, trendUnit = "%",
+}: {
+  label: string; value: string | number; unit?: string; sub?: string;
+  sparkData?: number[]; trend?: number | null; trendUnit?: string;
+}) {
+  const isPositive = trend === null || trend === undefined || trend >= 0;
+  return (
+    <div className="bg-[#111111] border border-[#1f1f1f] rounded-xl p-4 flex flex-col gap-2">
+      <div className="flex items-start justify-between gap-2">
+        <p className="text-[11px] font-semibold text-zinc-500 uppercase tracking-wider leading-tight">{label}</p>
+        {trend !== null && trend !== undefined && (
+          <span className={`shrink-0 text-[11px] font-semibold px-1.5 py-0.5 rounded-md ${
+            isPositive ? "bg-emerald-500/10 text-emerald-400" : "bg-red-500/10 text-red-400"
+          }`}>
+            {trend > 0 ? "+" : ""}{trend}{trendUnit}
+          </span>
+        )}
+      </div>
+      <p className="text-2xl font-bold text-white leading-none">
+        {value}
+        {unit && <span className="text-sm font-medium text-zinc-500 ml-1">{unit}</span>}
       </p>
-      {sub && <p className="text-xs text-gray-400 mt-1">{sub}</p>}
+      {sub && <p className="text-[11px] text-zinc-600 leading-tight">{sub}</p>}
+      {sparkData && sparkData.length > 2 && (
+        <SparkLine data={sparkData} positive={isPositive} />
+      )}
     </div>
   );
 }
 
-function Section({ title, children }: { title: string; children: React.ReactNode }) {
+// ── Dark section card ─────────────────────────────────────────────────────────
+
+function Section({ title, subtitle, children }: { title: string; subtitle?: string; children: React.ReactNode }) {
   return (
-    <div className="bg-white rounded-2xl border border-gray-100 shadow-lg p-5">
-      <h3 className="text-sm font-semibold text-gray-700 mb-4">{title}</h3>
+    <div className="bg-[#111111] border border-[#1f1f1f] rounded-xl p-5">
+      <div className="mb-4">
+        <h3 className="text-sm font-semibold text-white">{title}</h3>
+        {subtitle && <p className="text-xs text-zinc-600 mt-0.5">{subtitle}</p>}
+      </div>
       {children}
     </div>
   );
 }
+
+// ── Spinner ───────────────────────────────────────────────────────────────────
 
 function Spinner() {
   return (
@@ -146,35 +233,148 @@ function Spinner() {
   );
 }
 
-// ── Ticket table ──────────────────────────────────────────────────────────────
+// ── Status breakdown ──────────────────────────────────────────────────────────
+
+function StatusBreakdown({ statuts }: { statuts: NameValue[] }) {
+  const total = statuts.reduce((s, d) => s + d.value, 0);
+  if (total === 0) return <p className="text-sm text-zinc-600 text-center py-8">Aucune donnée</p>;
+
+  const ORDER = ["RECU", "DIAGNOSTIC", "ATTENTE_PIECES", "EN_REPARATION", "PRET", "LIVRE"];
+  const sorted = ORDER
+    .map((key) => statuts.find((d) => d.name === key))
+    .filter(Boolean) as NameValue[];
+
+  return (
+    <div className="space-y-3.5">
+      {sorted.map((d) => {
+        const color = STATUT_COLORS[d.name] ?? "#6b7280";
+        const pct = total > 0 ? Math.round((d.value / total) * 100) : 0;
+        return (
+          <div key={d.name} className="space-y-1.5">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <span className="w-2 h-2 rounded-full shrink-0" style={{ backgroundColor: color }} />
+                <span className="text-sm text-zinc-400">{STATUT_LABELS[d.name] ?? d.name}</span>
+              </div>
+              <div className="flex items-center gap-3">
+                <span className="text-sm font-semibold text-white">{d.value}</span>
+                <span className="text-xs text-zinc-600 w-8 text-right">{pct}%</span>
+              </div>
+            </div>
+            <div className="w-full h-1 bg-[#1a1a1a] rounded-full overflow-hidden">
+              <div
+                className="h-full rounded-full transition-all duration-500"
+                style={{ width: `${pct}%`, backgroundColor: color }}
+              />
+            </div>
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
+// ── Brand breakdown GA4-style ─────────────────────────────────────────────────
+
+function BrandBreakdown({ brands }: { brands: NameValue[] }) {
+  const filtered = brands.filter((d) => d.value > 0);
+  const total = filtered.reduce((s, d) => s + d.value, 0);
+  if (total === 0) return <p className="text-sm text-zinc-600 text-center py-8">Aucune donnée</p>;
+
+  return (
+    <div className="space-y-4">
+      {filtered.map((d) => {
+        const pct = total > 0 ? Math.round((d.value / total) * 100) : 0;
+        const color = getBrandColor(d.name);
+        return (
+          <div key={d.name}>
+            <div className="flex items-center justify-between mb-1">
+              <div className="flex items-center gap-2">
+                <span className="w-2 h-2 rounded-full shrink-0" style={{ backgroundColor: color }} />
+                <span className="text-sm font-medium text-zinc-300">{d.name}</span>
+              </div>
+              <span className="text-sm font-semibold text-white">{d.value}</span>
+            </div>
+            <div className="w-full h-1.5 bg-[#1a1a1a] rounded-full overflow-hidden">
+              <div
+                className="h-full rounded-full transition-all duration-500"
+                style={{ width: `${pct}%`, backgroundColor: color }}
+              />
+            </div>
+            <p className="text-[11px] text-zinc-600 mt-0.5">{pct}%</p>
+          </div>
+        );
+      })}
+
+      {/* Stacked bar */}
+      <div className="pt-1">
+        <div className="flex w-full h-2.5 rounded-full overflow-hidden">
+          {filtered.map((d) => {
+            const pct = total > 0 ? (d.value / total) * 100 : 0;
+            if (pct === 0) return null;
+            return (
+              <div
+                key={d.name}
+                title={`${d.name} – ${d.value} (${Math.round(pct)}%)`}
+                style={{ width: `${pct}%`, backgroundColor: getBrandColor(d.name) }}
+              />
+            );
+          })}
+        </div>
+        <div className="flex flex-wrap gap-x-4 gap-y-1.5 mt-2.5">
+          {filtered.map((d) => (
+            <div key={d.name} className="flex items-center gap-1.5">
+              <span className="w-2 h-2 rounded-full shrink-0" style={{ backgroundColor: getBrandColor(d.name) }} />
+              <span className="text-[11px] text-zinc-500">{d.name}</span>
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ── Ticket table (dark) ───────────────────────────────────────────────────────
 
 function TicketTable({ tickets }: { tickets: TicketRow[] }) {
-  if (tickets.length === 0) return <p className="text-sm text-gray-400 text-center py-6">Aucun ticket pour ce filtre.</p>;
+  if (tickets.length === 0) return (
+    <p className="text-sm text-zinc-600 text-center py-8">Aucun ticket pour ce filtre.</p>
+  );
   return (
     <div className="overflow-x-auto">
       <table className="w-full text-sm">
         <thead>
-          <tr className="border-b border-gray-100">
+          <tr className="border-b border-[#1f1f1f]">
             {["N° Ticket","Client","Machine","Marque","Statut","Date entrée","Date livraison","Délai (j)"].map((h) => (
-              <th key={h} className="text-left text-xs font-semibold text-gray-500 pb-2 pr-4 whitespace-nowrap">{h}</th>
+              <th key={h} className="text-left text-[11px] font-semibold text-zinc-600 pb-2.5 pr-4 whitespace-nowrap">{h}</th>
             ))}
           </tr>
         </thead>
-        <tbody>
+        <tbody className="divide-y divide-[#161616]">
           {tickets.map((t) => (
-            <tr key={t.numero} className="border-b border-gray-50 hover:bg-gray-50">
-              <td className="py-2 pr-4 font-mono font-semibold text-xs" style={{ color: "#F47920" }}>{t.numero}</td>
-              <td className="py-2 pr-4 whitespace-nowrap">{t.client}</td>
-              <td className="py-2 pr-4">{t.materiel}</td>
-              <td className="py-2 pr-4">{t.marque}</td>
-              <td className="py-2 pr-4 whitespace-nowrap">
-                <span className="px-2 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-700">
+            <tr key={t.numero} className="hover:bg-white/[0.02] transition-colors">
+              <td className="py-2.5 pr-4 font-mono font-bold text-xs text-[#F47920]">{t.numero}</td>
+              <td className="py-2.5 pr-4 whitespace-nowrap text-zinc-300">{t.client}</td>
+              <td className="py-2.5 pr-4 text-zinc-400">{t.materiel}</td>
+              <td className="py-2.5 pr-4 text-zinc-400">{t.marque}</td>
+              <td className="py-2.5 pr-4 whitespace-nowrap">
+                <span
+                  className="px-2 py-0.5 rounded-full text-[11px] font-medium"
+                  style={{
+                    backgroundColor: `${STATUT_COLORS[t.statut] ?? "#6b7280"}22`,
+                    color: STATUT_COLORS[t.statut] ?? "#6b7280",
+                  }}
+                >
                   {STATUT_LABELS[t.statut] ?? t.statut}
                 </span>
               </td>
-              <td className="py-2 pr-4 whitespace-nowrap text-gray-500">{t.dateEntree ? new Date(t.dateEntree).toLocaleDateString("fr-FR") : "—"}</td>
-              <td className="py-2 pr-4 whitespace-nowrap text-gray-500">{t.dateLivraison ? new Date(t.dateLivraison).toLocaleDateString("fr-FR") : "—"}</td>
-              <td className="py-2 pr-4 text-gray-500">{t.delai != null ? t.delai : "—"}</td>
+              <td className="py-2.5 pr-4 whitespace-nowrap text-zinc-600 text-xs">
+                {t.dateEntree ? new Date(t.dateEntree).toLocaleDateString("fr-FR") : "—"}
+              </td>
+              <td className="py-2.5 pr-4 whitespace-nowrap text-zinc-600 text-xs">
+                {t.dateLivraison ? new Date(t.dateLivraison).toLocaleDateString("fr-FR") : "—"}
+              </td>
+              <td className="py-2.5 pr-4 text-zinc-600 text-xs">{t.delai != null ? t.delai : "—"}</td>
             </tr>
           ))}
         </tbody>
@@ -286,31 +486,31 @@ async function exportPdf(tickets: TicketRow[], kpis: Kpis, from: string, to: str
   doc.save(`${title.replace(/[^a-z0-9]/gi, "-").toLowerCase()}-${from}-${to}.pdf`);
 }
 
-// ── Bar chart metadata per category ──────────────────────────────────────────
+// ── Tooltip style ─────────────────────────────────────────────────────────────
 
-function getParMoisMeta(cat: CatValue, data: StatsData) {
-  switch (cat) {
-    case "sorties":
-      return { title: "Machines sorties par mois (12 derniers mois)", chartData: data.parMoisSorties, name: "Sorties", unit: "" };
-    case "reparees":
-      return { title: "Machines réparées par mois (12 derniers mois)", chartData: data.parMoisSorties, name: "Réparées", unit: "" };
-    case "taux":
-      return { title: "Taux de réparation par mois (12 derniers mois)", chartData: data.parMoisTaux, name: "Taux", unit: "%" };
-    default:
-      return { title: "Machines entrées par mois (12 derniers mois)", chartData: data.parMois, name: "Entrées", unit: "" };
-  }
-}
+const darkTooltip = {
+  contentStyle: {
+    backgroundColor: "#161616",
+    border: "1px solid #1f1f1f",
+    borderRadius: 8,
+    boxShadow: "0 8px 32px rgba(0,0,0,0.5)",
+    fontSize: 12,
+    color: "#fff",
+  },
+  labelStyle: { color: "#71717a" },
+  cursor: { fill: "rgba(255,255,255,0.03)" },
+};
 
 // ── Main page ─────────────────────────────────────────────────────────────────
 
 export default function StatsPage() {
-  const [from, setFrom]               = useState(firstOfMonth());
-  const [to,   setTo]                 = useState(today());
-  const [data, setData]               = useState<StatsData | null>(null);
-  const [loading, setLoading]         = useState(false);
+  const [from, setFrom]                 = useState(firstOfMonth());
+  const [to,   setTo]                   = useState(today());
+  const [data, setData]                 = useState<StatsData | null>(null);
+  const [loading, setLoading]           = useState(false);
   const [activePreset, setActivePreset] = useState<string>("Ce mois");
   const [activeCategory, setActiveCategory] = useState<CatValue>("all");
-  const [exporting, setExporting]     = useState<"excel" | "pdf" | null>(null);
+  const [exporting, setExporting]       = useState<"excel" | "pdf" | null>(null);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -330,15 +530,12 @@ export default function StatsPage() {
     setTo(toFn());
   }
 
-  // Derived values based on active category
-  const config = CAT_CONFIG[activeCategory];
-  const showKpi   = (key: string) => config.kpis.includes("all") || config.kpis.includes(key);
-  const showChart = (key: "parMois" | "parStatut" | "parMarque" | "evolution") => config.charts.includes(key);
+  const config          = CAT_CONFIG[activeCategory];
+  const showKpi         = (key: string) => config.kpis.includes("all") || config.kpis.includes(key);
+  const showChart       = (key: "parMois" | "parStatut" | "parMarque" | "evolution") => config.charts.includes(key);
   const filteredTickets = data ? data.tickets.filter(config.ticketFilter) : [];
-  const catLabel   = CATEGORIES.find((c) => c.value === activeCategory)?.label ?? "Statistiques";
-  const exportTitle = activeCategory === "all"
-    ? "Rapport statistiques complet"
-    : `Bilan - ${catLabel}`;
+  const catLabel        = CATEGORIES.find((c) => c.value === activeCategory)?.label ?? "Statistiques";
+  const exportTitle     = activeCategory === "all" ? "Rapport statistiques complet" : `Bilan - ${catLabel}`;
 
   async function handleExcel() {
     if (!data) return;
@@ -354,255 +551,313 @@ export default function StatsPage() {
     finally { setExporting(null); }
   }
 
+  // Spark data (last 7 months)
+  const sparkEntrees  = data ? data.parMois.slice(-7).map((d) => d.count) : [];
+  const sparkSorties  = data ? data.parMoisSorties.slice(-7).map((d) => d.count) : [];
+  const sparkTaux     = data ? data.parMoisTaux.slice(-7).map((d) => d.count) : [];
+
+  // Trend vs previous month
+  const trendEntrees  = data ? computeTrend(data.parMois)       : null;
+  const trendSorties  = data ? computeTrend(data.parMoisSorties) : null;
+  const trendTaux     = data ? computeTrend(data.parMoisTaux)    : null;
+
   const hasCharts = config.charts.length > 0;
 
   return (
-    <div className="space-y-6 animate-fadeIn">
-      {/* Header */}
-      <div className="flex flex-wrap items-center justify-between gap-3">
+    <div className="-mx-4 -mt-4 sm:-mx-6 sm:-mt-6 md:-mx-8 md:-mt-8 px-4 pt-6 pb-10 sm:px-6 sm:pt-6 sm:pb-10 md:px-8 md:pt-8 md:pb-10 min-h-screen bg-[#0a0a0a] animate-fadeIn">
+
+      {/* ── Header ── */}
+      <div className="flex flex-wrap items-center justify-between gap-3 mb-5">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">Statistiques</h1>
-          <p className="text-gray-500 text-sm mt-0.5">Analyse des performances du SAV</p>
+          <h1 className="text-xl font-bold text-white tracking-tight">Statistiques</h1>
+          <p className="text-zinc-600 text-sm mt-0.5">Analyse des performances du SAV</p>
         </div>
         <div className="flex gap-2">
-          <button onClick={handleExcel} disabled={!data || exporting !== null}
-            className="flex items-center gap-2 px-3 py-2 bg-green-600 text-white rounded-lg text-sm font-medium hover:bg-green-700 disabled:opacity-50 transition-colors">
+          <button
+            onClick={handleExcel}
+            disabled={!data || exporting !== null}
+            className="flex items-center gap-2 px-3 py-1.5 bg-[#111111] border border-[#1f1f1f] text-zinc-300 rounded-lg text-sm font-medium hover:border-emerald-500/50 hover:text-emerald-400 disabled:opacity-40 transition-colors"
+          >
             {exporting === "excel" ? <Spinner /> : (
               <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
               </svg>
             )}
-            Exporter Excel
+            Excel
           </button>
-          <button onClick={handlePdf} disabled={!data || exporting !== null}
-            className="flex items-center gap-2 px-3 py-2 bg-red-600 text-white rounded-lg text-sm font-medium hover:bg-red-700 disabled:opacity-50 transition-colors">
+          <button
+            onClick={handlePdf}
+            disabled={!data || exporting !== null}
+            className="flex items-center gap-2 px-3 py-1.5 bg-[#111111] border border-[#1f1f1f] text-zinc-300 rounded-lg text-sm font-medium hover:border-red-500/50 hover:text-red-400 disabled:opacity-40 transition-colors"
+          >
             {exporting === "pdf" ? <Spinner /> : (
               <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z" />
               </svg>
             )}
-            Exporter PDF
+            PDF
           </button>
         </div>
       </div>
 
-      {/* Date filter */}
-      <div className="bg-white rounded-xl border border-gray-100 shadow-sm p-4">
+      {/* ── Date filter ── */}
+      <div className="bg-[#111111] border border-[#1f1f1f] rounded-xl px-4 py-3 mb-4">
         <div className="flex flex-wrap items-center gap-3">
-          <div className="flex gap-1.5 flex-wrap">
+          <div className="flex gap-1 flex-wrap">
             {PRESETS.map((p) => (
-              <button key={p.label} onClick={() => applyPreset(p.label, p.from, p.to)}
-                className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${activePreset === p.label ? "text-white" : "bg-gray-100 text-gray-600 hover:bg-gray-200"}`}
-                style={activePreset === p.label ? { backgroundColor: "#F47920" } : {}}>
+              <button
+                key={p.label}
+                onClick={() => applyPreset(p.label, p.from, p.to)}
+                className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${
+                  activePreset === p.label
+                    ? "text-white"
+                    : "text-zinc-500 hover:text-zinc-300 hover:bg-white/5"
+                }`}
+                style={activePreset === p.label ? { backgroundColor: "#F47920" } : {}}
+              >
                 {p.label}
               </button>
             ))}
-            <button onClick={() => setActivePreset("custom")}
-              className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${activePreset === "custom" ? "text-white" : "bg-gray-100 text-gray-600 hover:bg-gray-200"}`}
-              style={activePreset === "custom" ? { backgroundColor: "#F47920" } : {}}>
+            <button
+              onClick={() => setActivePreset("custom")}
+              className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${
+                activePreset === "custom"
+                  ? "text-white"
+                  : "text-zinc-500 hover:text-zinc-300 hover:bg-white/5"
+              }`}
+              style={activePreset === "custom" ? { backgroundColor: "#F47920" } : {}}
+            >
               Personnalisé
             </button>
           </div>
           <div className="flex items-center gap-2 ml-auto flex-wrap">
-            <input type="date" value={from} onChange={(e) => { setFrom(e.target.value); setActivePreset("custom"); }}
-              className="px-2 py-1.5 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-1 focus:ring-stihl-500" />
-            <span className="text-gray-400 text-sm">→</span>
-            <input type="date" value={to} onChange={(e) => { setTo(e.target.value); setActivePreset("custom"); }}
-              className="px-2 py-1.5 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-1 focus:ring-stihl-500" />
+            <input
+              type="date"
+              value={from}
+              onChange={(e) => { setFrom(e.target.value); setActivePreset("custom"); }}
+              className="px-2.5 py-1.5 bg-[#161616] border border-[#2a2a2a] text-zinc-300 rounded-lg text-sm focus:outline-none focus:border-[#F47920]/50 transition-colors"
+            />
+            <span className="text-zinc-700 text-sm">→</span>
+            <input
+              type="date"
+              value={to}
+              onChange={(e) => { setTo(e.target.value); setActivePreset("custom"); }}
+              className="px-2.5 py-1.5 bg-[#161616] border border-[#2a2a2a] text-zinc-300 rounded-lg text-sm focus:outline-none focus:border-[#F47920]/50 transition-colors"
+            />
           </div>
         </div>
       </div>
 
-      {/* Category filter */}
-      <div className="bg-white rounded-xl border border-gray-100 shadow-sm p-4">
-        <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-3">Filtrer par catégorie</p>
-        <div className="flex flex-wrap gap-2">
+      {/* ── Category tabs ── */}
+      <div className="overflow-x-auto mb-6 -mx-4 px-4 sm:-mx-6 sm:px-6 md:-mx-8 md:px-8">
+        <div className="flex gap-1 min-w-max">
           {CATEGORIES.map((c) => (
-            <button key={c.value} onClick={() => setActiveCategory(c.value)}
-              className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors border ${
+            <button
+              key={c.value}
+              onClick={() => setActiveCategory(c.value)}
+              className={`px-3.5 py-1.5 rounded-lg text-sm font-medium transition-all whitespace-nowrap ${
                 activeCategory === c.value
-                  ? "text-white border-transparent"
-                  : "bg-white text-gray-600 border-gray-200 hover:border-gray-300 hover:bg-gray-50"
+                  ? "text-white shadow-lg"
+                  : "text-zinc-500 hover:text-zinc-300 hover:bg-white/5"
               }`}
-              style={activeCategory === c.value ? { backgroundColor: "#F47920" } : {}}>
+              style={activeCategory === c.value ? { backgroundColor: "#F47920" } : {}}
+            >
               {c.label}
             </button>
           ))}
         </div>
-        {activeCategory !== "all" && (
-          <p className="text-xs text-gray-400 mt-3">
-            Export : <span className="font-medium text-gray-600">{exportTitle} — {from} → {to}</span>
-          </p>
-        )}
       </div>
 
-      {/* Loading */}
+      {/* ── Loading ── */}
       {loading && (
-        <div className="flex items-center justify-center py-20 text-gray-400 gap-3">
-          <Spinner /> Chargement...
+        <div className="flex items-center justify-center py-24 text-zinc-700 gap-3">
+          <Spinner /> <span className="text-sm">Chargement…</span>
         </div>
       )}
 
       {!loading && data && (
-        <>
-          {/* KPI cards */}
+        <div className="space-y-4">
+
+          {/* ── KPI cards grid ── */}
           {(() => {
             const cards = [
-              showKpi("totalEntrees")    && <KpiCard key="e"  label="Machines entrées"    value={data.kpis.totalEntrees} />,
-              showKpi("totalRepares")    && <KpiCard key="r"  label="Machines réparées"   value={data.kpis.totalRepares} />,
-              showKpi("machinesSorties") && <KpiCard key="s"  label="Machines sorties"    value={data.kpis.machinesSorties} sub="Livré avec date de retrait" />,
-              showKpi("tauxReparation")  && <KpiCard key="t"  label="Taux de réparation"  value={data.kpis.tauxReparation} unit="%" />,
-              showKpi("delaiMoyen")      && <KpiCard key="d"  label="Délai moyen"         value={data.kpis.delaiMoyen} unit="j" sub="entre dépôt et livraison" />,
-              showKpi("enAttentePieces") && <KpiCard key="a"  label="Attente pièces"      value={data.kpis.enAttentePieces} sub="en cours (toutes périodes)" />,
-              showKpi("rdvPeriode")      && <KpiCard key="rv" label="RDV pris"            value={data.kpis.rdvPeriode} sub="sur la période" />,
+              showKpi("totalEntrees")    && (
+                <KpiCard key="e"  label="Machines entrées"   value={data.kpis.totalEntrees}
+                  sparkData={sparkEntrees} trend={trendEntrees} />
+              ),
+              showKpi("totalRepares")    && (
+                <KpiCard key="r"  label="Machines réparées"  value={data.kpis.totalRepares}
+                  sparkData={sparkSorties} trend={trendSorties} />
+              ),
+              showKpi("machinesSorties") && (
+                <KpiCard key="s"  label="Machines sorties"   value={data.kpis.machinesSorties}
+                  sparkData={sparkSorties} trend={trendSorties} sub="Livré avec date de retrait" />
+              ),
+              showKpi("tauxReparation")  && (
+                <KpiCard key="t"  label="Taux de réparation" value={data.kpis.tauxReparation}
+                  unit="%" sparkData={sparkTaux} trend={trendTaux} trendUnit="pts" />
+              ),
+              showKpi("delaiMoyen")      && (
+                <KpiCard key="d"  label="Délai moyen"        value={data.kpis.delaiMoyen}
+                  unit="j" sub="entre dépôt et livraison" />
+              ),
+              showKpi("enAttentePieces") && (
+                <KpiCard key="a"  label="Attente pièces"     value={data.kpis.enAttentePieces}
+                  sub="en cours (toutes périodes)" />
+              ),
+              showKpi("rdvPeriode")      && (
+                <KpiCard key="rv" label="RDV pris"           value={data.kpis.rdvPeriode}
+                  sub="sur la période" />
+              ),
             ].filter(Boolean);
-            return cards.length > 0 ? (
-              <div className={`grid gap-4 ${cards.length <= 3 ? "grid-cols-1 sm:grid-cols-3" : cards.length <= 4 ? "grid-cols-2 sm:grid-cols-4" : "grid-cols-2 sm:grid-cols-3 xl:grid-cols-" + cards.length}`}>
+
+            if (cards.length === 0) return null;
+            return (
+              <div className="grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-4 gap-3">
                 {cards}
               </div>
-            ) : null;
+            );
           })()}
 
-          {/* Charts */}
-          {hasCharts && (
-            <>
-              {(showChart("parMois") || showChart("parStatut")) && (() => {
-                const parMoisMeta = getParMoisMeta(activeCategory, data);
-                return (
-                <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-                  {showChart("parMois") && (
-                    <Section title={parMoisMeta.title}>
-                      <ResponsiveContainer width="100%" height={240}>
-                        <BarChart data={parMoisMeta.chartData} margin={{ top: 22, right: 8, left: -24, bottom: 0 }} barCategoryGap="30%">
+          {/* ── Bar chart + Status breakdown ── */}
+          {(showChart("parMois") || showChart("parStatut")) && (() => {
+            const meta = getParMoisMeta(activeCategory, data);
+            return (
+              <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+
+                {showChart("parMois") && (
+                  <div className={showChart("parStatut") ? "lg:col-span-2" : "lg:col-span-3"}>
+                    <Section title={meta.title}>
+                      <ResponsiveContainer width="100%" height={220}>
+                        <BarChart
+                          data={meta.chartData}
+                          margin={{ top: 16, right: 4, left: -28, bottom: 0 }}
+                          barCategoryGap="28%"
+                        >
                           <defs>
-                            <linearGradient id="barGrad" x1="0" y1="0" x2="0" y2="1">
+                            <linearGradient id="barGradDark" x1="0" y1="0" x2="0" y2="1">
                               <stop offset="0%" stopColor="#F47920" stopOpacity={1} />
-                              <stop offset="100%" stopColor="#FFB347" stopOpacity={1} />
+                              <stop offset="100%" stopColor="#d4660e" stopOpacity={1} />
                             </linearGradient>
                           </defs>
-                          <CartesianGrid strokeDasharray="3 3" stroke="#f3f4f6" vertical={false} />
-                          <XAxis dataKey="month" tick={{ fontSize: 10, fill: "#9ca3af" }} axisLine={false} tickLine={false} />
-                          <YAxis tick={{ fontSize: 10, fill: "#d1d5db" }} axisLine={false} tickLine={false} allowDecimals={false} />
-                          <Tooltip cursor={{ fill: "rgba(0,0,0,0.04)" }} contentStyle={{ borderRadius: 10, border: "none", boxShadow: "0 4px 20px rgba(0,0,0,0.1)", fontSize: 12 }}
-                            formatter={(v: unknown) => [`${v}${parMoisMeta.unit}`, parMoisMeta.name]} />
-                          <Bar dataKey="count" name={parMoisMeta.name} fill="url(#barGrad)" radius={[6, 6, 0, 0]} isAnimationActive={true} animationDuration={800} animationEasing="ease-out">
-                            <LabelList dataKey="count" position="top" style={{ fontSize: 10, fill: "#9ca3af", fontWeight: 500 }}
-                              formatter={(v: unknown) => (typeof v === "number" && v > 0) ? `${v}${parMoisMeta.unit}` : ""} />
+                          <CartesianGrid strokeDasharray="3 3" stroke="#1a1a1a" vertical={false} />
+                          <XAxis
+                            dataKey="month"
+                            tick={{ fontSize: 10, fill: "#52525b" }}
+                            axisLine={false}
+                            tickLine={false}
+                          />
+                          <YAxis
+                            tick={{ fontSize: 10, fill: "#3f3f46" }}
+                            axisLine={false}
+                            tickLine={false}
+                            allowDecimals={false}
+                          />
+                          <Tooltip
+                            {...darkTooltip}
+                            formatter={(v: unknown) => [`${v}${meta.unit}`, meta.name]}
+                          />
+                          <Bar
+                            dataKey="count"
+                            name={meta.name}
+                            radius={[4, 4, 0, 0]}
+                            isAnimationActive
+                            animationDuration={700}
+                            animationEasing="ease-out"
+                          >
+                            {meta.chartData.map((_, i) => (
+                              <Cell
+                                key={`cell-${i}`}
+                                fill={i === meta.chartData.length - 1 ? "url(#barGradDark)" : "#1e1e1e"}
+                                stroke={i === meta.chartData.length - 1 ? "none" : "#2a2a2a"}
+                                strokeWidth={1}
+                              />
+                            ))}
+                            <LabelList
+                              dataKey="count"
+                              position="top"
+                              style={{ fontSize: 9, fill: "#52525b", fontWeight: 500 }}
+                              formatter={(v: unknown) => (typeof v === "number" && v > 0) ? `${v}${meta.unit}` : ""}
+                            />
                           </Bar>
                         </BarChart>
                       </ResponsiveContainer>
                     </Section>
-                  )}
-                  {showChart("parStatut") && (
-                    <Section title="Répartition par statut">
-                      {data.parStatut.length === 0 ? (
-                        <p className="text-sm text-gray-400 text-center py-16">Aucune donnée</p>
-                      ) : (() => {
-                        const total = data.parStatut.reduce((s, d) => s + d.value, 0);
-                        const ORDER = ["RECU","DIAGNOSTIC","ATTENTE_PIECES","EN_REPARATION","PRET","LIVRE"];
-                        const sorted = ORDER
-                          .map((key) => data.parStatut.find((d) => d.name === key))
-                          .filter(Boolean) as { name: string; value: number }[];
-                        return (
-                          <div className="grid grid-cols-2 gap-3">
-                            {sorted.map((d) => {
-                              const color = STATUT_COLORS[d.name] ?? "#94a3b8";
-                              const pct = total > 0 ? Math.round((d.value / total) * 100) : 0;
-                              return (
-                                <div key={d.name} className="rounded-2xl shadow-md bg-white p-4 border-l-4 flex flex-col gap-2"
-                                  style={{ borderLeftColor: color }}>
-                                  <div className="flex items-center gap-2">
-                                    <span className="w-2.5 h-2.5 rounded-full flex-shrink-0" style={{ backgroundColor: color }} />
-                                    <span className="text-xs font-medium text-gray-500 truncate">{STATUT_LABELS[d.name] ?? d.name}</span>
-                                  </div>
-                                  <p className="text-3xl font-bold text-gray-900 leading-none">{d.value}</p>
-                                  <div className="space-y-1">
-                                    <div className="w-full h-1.5 bg-gray-100 rounded-full overflow-hidden">
-                                      <div className="h-full rounded-full transition-all" style={{ width: `${pct}%`, backgroundColor: color }} />
-                                    </div>
-                                    <p className="text-xs text-gray-400">{pct}%</p>
-                                  </div>
-                                </div>
-                              );
-                            })}
-                          </div>
-                        );
-                      })()}
-                    </Section>
-                  )}
-                </div>
-                );
-              })()}
+                  </div>
+                )}
 
-              {(showChart("parMarque") || showChart("evolution")) && (
-                <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-                  {showChart("parMarque") && (
-                    <Section title="Répartition par marque">
-                      {data.parMarque.filter((d) => d.value > 0).length === 0 ? (
-                        <p className="text-sm text-gray-400 text-center py-16">Aucune donnée</p>
-                      ) : (() => {
-                        const brands = data.parMarque.filter((d) => d.value > 0);
-                        const total = brands.reduce((s, d) => s + d.value, 0);
-                        return (
-                          <div className="space-y-3">
-                            {brands.map((d) => {
-                              const pct = total > 0 ? Math.round((d.value / total) * 100) : 0;
-                              return (
-                                <div key={d.name} className="rounded-2xl shadow-md bg-white px-4 py-3 border-l-4 flex flex-col gap-2"
-                                  style={{ borderLeftColor: "#F47920" }}>
-                                  <div className="flex items-center justify-between">
-                                    <span className="text-sm font-bold text-gray-800">{d.name}</span>
-                                    <span className="text-2xl font-bold text-gray-900">{d.value}</span>
-                                  </div>
-                                  <div className="w-full h-1.5 bg-gray-100 rounded-full overflow-hidden">
-                                    <div className="h-full rounded-full transition-all"
-                                      style={{ width: `${pct}%`, background: "linear-gradient(to right, #FFB347, #F47920)" }} />
-                                  </div>
-                                  <p className="text-xs text-gray-400">{pct}%</p>
-                                </div>
-                              );
-                            })}
-                          </div>
-                        );
-                      })()}
-                    </Section>
-                  )}
-                  {showChart("evolution") && (
-                    <Section title="Évolution mensuelle (24 derniers mois)">
-                      <ResponsiveContainer width="100%" height={240}>
-                        <AreaChart data={data.evolution} margin={{ top: 16, right: 8, left: -24, bottom: 0 }}>
-                          <defs>
-                            <linearGradient id="areaGrad" x1="0" y1="0" x2="0" y2="1">
-                              <stop offset="0%"  stopColor="#F47920" stopOpacity={0.3} />
-                              <stop offset="100%" stopColor="#F47920" stopOpacity={0} />
-                            </linearGradient>
-                          </defs>
-                          <CartesianGrid strokeDasharray="3 3" stroke="#f3f4f6" vertical={false} />
-                          <XAxis dataKey="month" tick={{ fontSize: 10, fill: "#9ca3af" }} axisLine={false} tickLine={false} interval={3} />
-                          <YAxis tick={{ fontSize: 10, fill: "#d1d5db" }} axisLine={false} tickLine={false} allowDecimals={false} />
-                          <Tooltip cursor={{ stroke: "#F47920", strokeWidth: 1, strokeDasharray: "4 4" }} contentStyle={{ borderRadius: 10, border: "none", boxShadow: "0 4px 20px rgba(0,0,0,0.1)", fontSize: 12 }} />
-                          <Area type="monotone" dataKey="count" name="Entrées"
-                            stroke={BRAND_COLOR} strokeWidth={3}
-                            fill="url(#areaGrad)"
-                            dot={{ r: 4, fill: "#F47920", stroke: "#fff", strokeWidth: 2 }}
-                            activeDot={{ r: 6, fill: "#F47920", stroke: "#fff", strokeWidth: 2 }}
-                            isAnimationActive={true} animationDuration={900} animationEasing="ease-out" />
-                        </AreaChart>
-                      </ResponsiveContainer>
-                    </Section>
-                  )}
-                </div>
+                {showChart("parStatut") && (
+                  <Section title="Par statut">
+                    <StatusBreakdown statuts={data.parStatut} />
+                  </Section>
+                )}
+              </div>
+            );
+          })()}
+
+          {/* ── Brand + Evolution ── */}
+          {(showChart("parMarque") || showChart("evolution")) && (
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+              {showChart("parMarque") && (
+                <Section title="Par marque">
+                  <BrandBreakdown brands={data.parMarque} />
+                </Section>
               )}
-            </>
+              {showChart("evolution") && (
+                <Section title="Évolution mensuelle" subtitle="24 derniers mois">
+                  <ResponsiveContainer width="100%" height={220}>
+                    <AreaChart data={data.evolution} margin={{ top: 16, right: 4, left: -28, bottom: 0 }}>
+                      <defs>
+                        <linearGradient id="areaGradDark" x1="0" y1="0" x2="0" y2="1">
+                          <stop offset="0%"   stopColor="#F47920" stopOpacity={0.25} />
+                          <stop offset="100%" stopColor="#F47920" stopOpacity={0} />
+                        </linearGradient>
+                      </defs>
+                      <CartesianGrid strokeDasharray="3 3" stroke="#1a1a1a" vertical={false} />
+                      <XAxis
+                        dataKey="month"
+                        tick={{ fontSize: 10, fill: "#52525b" }}
+                        axisLine={false}
+                        tickLine={false}
+                        interval={3}
+                      />
+                      <YAxis
+                        tick={{ fontSize: 10, fill: "#3f3f46" }}
+                        axisLine={false}
+                        tickLine={false}
+                        allowDecimals={false}
+                      />
+                      <Tooltip
+                        {...darkTooltip}
+                        cursor={{ stroke: "#F47920", strokeWidth: 1, strokeDasharray: "4 4" }}
+                      />
+                      <Area
+                        type="monotone"
+                        dataKey="count"
+                        name="Entrées"
+                        stroke="#F47920"
+                        strokeWidth={2}
+                        fill="url(#areaGradDark)"
+                        dot={{ r: 3, fill: "#F47920", stroke: "#0a0a0a", strokeWidth: 2 }}
+                        activeDot={{ r: 5, fill: "#F47920", stroke: "#0a0a0a", strokeWidth: 2 }}
+                        isAnimationActive
+                        animationDuration={900}
+                        animationEasing="ease-out"
+                      />
+                    </AreaChart>
+                  </ResponsiveContainer>
+                </Section>
+              )}
+            </div>
           )}
 
-          {/* Filtered ticket list */}
+          {/* ── Ticket list ── */}
           {config.showTickets && (
-            <Section title={`Liste des tickets — ${catLabel} (${filteredTickets.length})`}>
+            <Section title={`Liste des tickets — ${catLabel}`} subtitle={`${filteredTickets.length} ticket${filteredTickets.length > 1 ? "s" : ""}`}>
               <TicketTable tickets={filteredTickets} />
             </Section>
           )}
-        </>
+        </div>
       )}
     </div>
   );
