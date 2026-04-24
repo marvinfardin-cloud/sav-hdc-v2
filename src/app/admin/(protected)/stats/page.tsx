@@ -135,7 +135,7 @@ function computeTrend(series: ChartPoint[]): number | null {
   if (series.length < 2) return null;
   const cur  = series[series.length - 1].count;
   const prev = series[series.length - 2].count;
-  if (prev === 0) return cur > 0 ? 100 : null;
+  if (prev === 0) return null;
   return Math.round(((cur - prev) / prev) * 100);
 }
 
@@ -636,14 +636,14 @@ export default function StatsPage() {
               type="date"
               value={from}
               onChange={(e) => { setFrom(e.target.value); setActivePreset("custom"); }}
-              className="px-2.5 py-1.5 bg-[#161616] border border-[#2a2a2a] text-zinc-300 rounded-lg text-sm focus:outline-none focus:border-[#F47920]/50 transition-colors"
+              className="px-2.5 py-1.5 bg-[#161616] border border-[#2a2a2a] text-zinc-300 rounded-lg text-sm focus:outline-none focus:border-[#F47920]/50 transition-colors [color-scheme:dark]"
             />
             <span className="text-zinc-700 text-sm">→</span>
             <input
               type="date"
               value={to}
               onChange={(e) => { setTo(e.target.value); setActivePreset("custom"); }}
-              className="px-2.5 py-1.5 bg-[#161616] border border-[#2a2a2a] text-zinc-300 rounded-lg text-sm focus:outline-none focus:border-[#F47920]/50 transition-colors"
+              className="px-2.5 py-1.5 bg-[#161616] border border-[#2a2a2a] text-zinc-300 rounded-lg text-sm focus:outline-none focus:border-[#F47920]/50 transition-colors [color-scheme:dark]"
             />
           </div>
         </div>
