@@ -37,6 +37,8 @@ interface StatsData {
   parStatut: NameValue[];
   parMarque: NameValue[];
   parMois: ChartPoint[];
+  parMoisSorties: ChartPoint[];
+  parMoisTaux: ChartPoint[];
   evolution: ChartPoint[];
   tickets: TicketRow[];
 }
@@ -85,9 +87,9 @@ interface CatConfig {
 const CAT_CONFIG: Record<CatValue, CatConfig> = {
   all:      { kpis: ["all"], charts: ["parMois", "parStatut", "parMarque", "evolution"], ticketFilter: () => true,                                         showTickets: true  },
   entrees:  { kpis: ["totalEntrees"],                                                    charts: ["parMois", "evolution"],                                  ticketFilter: () => true,                                                          showTickets: true  },
-  reparees: { kpis: ["totalRepares", "tauxReparation", "delaiMoyen"],                   charts: ["parStatut"],                                             ticketFilter: (t) => t.statut === "LIVRE",                                         showTickets: true  },
+  reparees: { kpis: ["totalRepares", "tauxReparation", "delaiMoyen"],                   charts: ["parMois", "parStatut"],                                  ticketFilter: (t) => t.statut === "LIVRE",                                         showTickets: true  },
   sorties:  { kpis: ["machinesSorties"],                                                 charts: ["parMois"],                                               ticketFilter: (t) => t.statut === "LIVRE" && t.dateLivraison !== null,            showTickets: true  },
-  taux:     { kpis: ["totalEntrees", "totalRepares", "tauxReparation"],                 charts: ["parStatut"],                                             ticketFilter: () => true,                                                          showTickets: false },
+  taux:     { kpis: ["totalEntrees", "totalRepares", "tauxReparation"],                 charts: ["parMois", "parStatut"],                                  ticketFilter: () => true,                                                          showTickets: false },
   attente:  { kpis: ["enAttentePieces"],                                                 charts: [],                                                        ticketFilter: (t) => t.statut === "ATTENTE_PIECES",                               showTickets: true  },
   rdv:      { kpis: ["rdvPeriode"],                                                      charts: [],                                                        ticketFilter: () => false,                                                         showTickets: false },
   marque:   { kpis: ["totalEntrees"],                                                    charts: ["parMarque"],                                             ticketFilter: () => true,                                                          showTickets: true  },
@@ -284,6 +286,21 @@ async function exportPdf(tickets: TicketRow[], kpis: Kpis, from: string, to: str
   doc.save(`${title.replace(/[^a-z0-9]/gi, "-").toLowerCase()}-${from}-${to}.pdf`);
 }
 
+// ── Bar chart metadata per category ──────────────────────────────────────────
+
+function getParMoisMeta(cat: CatValue, data: StatsData) {
+  switch (cat) {
+    case "sorties":
+      return { title: "Machines sorties par mois (12 derniers mois)", chartData: data.parMoisSorties, name: "Sorties", unit: "" };
+    case "reparees":
+      return { title: "Machines réparées par mois (12 derniers mois)", chartData: data.parMoisSorties, name: "Réparées", unit: "" };
+    case "taux":
+      return { title: "Taux de réparation par mois (12 derniers mois)", chartData: data.parMoisTaux, name: "Taux", unit: "%" };
+    default:
+      return { title: "Machines entrées par mois (12 derniers mois)", chartData: data.parMois, name: "Entrées", unit: "" };
+  }
+}
+
 // ── Main page ─────────────────────────────────────────────────────────────────
 
 export default function StatsPage() {
@@ -449,12 +466,14 @@ export default function StatsPage() {
           {/* Charts */}
           {hasCharts && (
             <>
-              {(showChart("parMois") || showChart("parStatut")) && (
+              {(showChart("parMois") || showChart("parStatut")) && (() => {
+                const parMoisMeta = getParMoisMeta(activeCategory, data);
+                return (
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
                   {showChart("parMois") && (
-                    <Section title="Machines entrées par mois (12 derniers mois)">
+                    <Section title={parMoisMeta.title}>
                       <ResponsiveContainer width="100%" height={240}>
-                        <BarChart data={data.parMois} margin={{ top: 22, right: 8, left: -24, bottom: 0 }} barCategoryGap="30%">
+                        <BarChart data={parMoisMeta.chartData} margin={{ top: 22, right: 8, left: -24, bottom: 0 }} barCategoryGap="30%">
                           <defs>
                             <linearGradient id="barGrad" x1="0" y1="0" x2="0" y2="1">
                               <stop offset="0%" stopColor="#F47920" stopOpacity={1} />
@@ -464,9 +483,11 @@ export default function StatsPage() {
                           <CartesianGrid strokeDasharray="3 3" stroke="#f3f4f6" vertical={false} />
                           <XAxis dataKey="month" tick={{ fontSize: 10, fill: "#9ca3af" }} axisLine={false} tickLine={false} />
                           <YAxis tick={{ fontSize: 10, fill: "#d1d5db" }} axisLine={false} tickLine={false} allowDecimals={false} />
-                          <Tooltip cursor={{ fill: "rgba(0,0,0,0.04)" }} contentStyle={{ borderRadius: 10, border: "none", boxShadow: "0 4px 20px rgba(0,0,0,0.1)", fontSize: 12 }} />
-                          <Bar dataKey="count" name="Entrées" fill="url(#barGrad)" radius={[6, 6, 0, 0]} isAnimationActive={true} animationDuration={800} animationEasing="ease-out">
-                            <LabelList dataKey="count" position="top" style={{ fontSize: 10, fill: "#9ca3af", fontWeight: 500 }} formatter={(v: unknown) => (typeof v === "number" && v > 0) ? v : ""} />
+                          <Tooltip cursor={{ fill: "rgba(0,0,0,0.04)" }} contentStyle={{ borderRadius: 10, border: "none", boxShadow: "0 4px 20px rgba(0,0,0,0.1)", fontSize: 12 }}
+                            formatter={(v: unknown) => [`${v}${parMoisMeta.unit}`, parMoisMeta.name]} />
+                          <Bar dataKey="count" name={parMoisMeta.name} fill="url(#barGrad)" radius={[6, 6, 0, 0]} isAnimationActive={true} animationDuration={800} animationEasing="ease-out">
+                            <LabelList dataKey="count" position="top" style={{ fontSize: 10, fill: "#9ca3af", fontWeight: 500 }}
+                              formatter={(v: unknown) => (typeof v === "number" && v > 0) ? `${v}${parMoisMeta.unit}` : ""} />
                           </Bar>
                         </BarChart>
                       </ResponsiveContainer>
@@ -510,7 +531,8 @@ export default function StatsPage() {
                     </Section>
                   )}
                 </div>
-              )}
+                );
+              })()}
 
               {(showChart("parMarque") || showChart("evolution")) && (
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">

@@ -3,12 +3,19 @@ import { prisma } from "@/lib/prisma";
 import { getAdminSession } from "@/lib/auth";
 import { noCacheHeaders } from "@/lib/utils";
 
-// Build an ordered list of N calendar month strings "YYYY-MM" ending at current month
+// Convert a UTC Date to its "YYYY-MM" bucket in Martinique timezone (UTC-4)
+function mtnMonthKey(date: Date): string {
+  return date.toLocaleDateString("en-CA", { timeZone: "America/Martinique" }).slice(0, 7);
+}
+
+// Build an ordered list of N calendar month strings "YYYY-MM" ending at the current
+// Martinique month so rolling charts don't drift when UTC has crossed a month boundary.
 function lastNMonths(n: number): string[] {
+  const mtnNow = new Date().toLocaleDateString("en-CA", { timeZone: "America/Martinique" });
+  const [y, m] = mtnNow.split("-").map(Number);
   const months: string[] = [];
-  const now = new Date();
   for (let i = n - 1; i >= 0; i--) {
-    const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+    const d = new Date(y, m - 1 - i, 1);
     months.push(`${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`);
   }
   return months;
@@ -63,7 +70,13 @@ export async function GET(request: NextRequest) {
   const fromDate = new Date(`${from}T00:00:00-04:00`);
   const toDate   = new Date(`${to}T23:59:59.999-04:00`);
 
-  const [tickets, rdvPeriode, enAttentePieces, allTickets24, livreHistos] = await Promise.all([
+  // Start of rolling 24-month window in Martinique time
+  const mtnNow = new Date().toLocaleDateString("en-CA", { timeZone: "America/Martinique" });
+  const [mtnYear, mtnMonth] = mtnNow.split("-").map(Number);
+  const rolling24Start = new Date(`${mtnYear}-${String(mtnMonth).padStart(2, "0")}-01T00:00:00-04:00`);
+  rolling24Start.setMonth(rolling24Start.getMonth() - 23);
+
+  const [tickets, rdvPeriode, enAttentePieces, allTickets24, livreHistos, allLivre24] = await Promise.all([
     // Tickets created (entrées) in the period
     prisma.ticket.findMany({
       where: { createdAt: { gte: fromDate, lte: toDate } },
@@ -72,16 +85,21 @@ export async function GET(request: NextRequest) {
     }),
     prisma.rendezVous.count({ where: { dateHeure: { gte: fromDate, lte: toDate } } }),
     prisma.ticket.count({ where: { statut: "ATTENTE_PIECES" } }),
-    // all tickets in last 24 months for rolling charts
+    // Tickets created in last 24 months for rolling entrées charts
     prisma.ticket.findMany({
-      where: { createdAt: { gte: new Date(new Date().getFullYear(), new Date().getMonth() - 23, 1) } },
+      where: { createdAt: { gte: rolling24Start } },
       select: { createdAt: true },
     }),
-    // Historique entries where status changed to LIVRE in the period
+    // Historique LIVRE entries within the selected period (for KPIs)
     prisma.historique.findMany({
       where: { statut: "LIVRE", createdAt: { gte: fromDate, lte: toDate } },
       select: { ticketId: true, createdAt: true, ticket: { select: { createdAt: true } } },
       orderBy: { createdAt: "asc" },
+    }),
+    // Historique LIVRE entries in last 24 months for rolling sorties/réparées charts
+    prisma.historique.findMany({
+      where: { statut: "LIVRE", createdAt: { gte: rolling24Start } },
+      select: { createdAt: true },
     }),
   ]);
 
@@ -125,20 +143,34 @@ export async function GET(request: NextRequest) {
     .sort((a, b) => b.value - a.value)
     .slice(0, 10);
 
-  // Par mois — last 12 months (rolling, not period-filtered)
+  // Par mois — last 12 months (rolling, Martinique timezone bucketing)
   const months12 = lastNMonths(12);
-  const month12Map: Record<string, number> = Object.fromEntries(months12.map((m) => [m, 0]));
+  const month12Entrees: Record<string, number> = Object.fromEntries(months12.map((m) => [m, 0]));
   for (const t of allTickets24) {
-    const key = `${t.createdAt.getFullYear()}-${String(t.createdAt.getMonth() + 1).padStart(2, "0")}`;
-    if (month12Map[key] !== undefined) month12Map[key]++;
+    const key = mtnMonthKey(t.createdAt);
+    if (month12Entrees[key] !== undefined) month12Entrees[key]++;
   }
-  const parMois = months12.map((m) => ({ month: monthLabel(m), count: month12Map[m] }));
+  const parMois = months12.map((m) => ({ month: monthLabel(m), count: month12Entrees[m] }));
 
-  // Évolution — last 24 months (rolling)
+  // Sorties par mois — last 12 months (when ticket became LIVRE)
+  const month12Sorties: Record<string, number> = Object.fromEntries(months12.map((m) => [m, 0]));
+  for (const h of allLivre24) {
+    const key = mtnMonthKey(h.createdAt);
+    if (month12Sorties[key] !== undefined) month12Sorties[key]++;
+  }
+  const parMoisSorties = months12.map((m) => ({ month: monthLabel(m), count: month12Sorties[m] }));
+
+  // Taux par mois — sorties / entrées × 100 for each of the last 12 months
+  const parMoisTaux = months12.map((m) => ({
+    month: monthLabel(m),
+    count: month12Entrees[m] > 0 ? Math.round((month12Sorties[m] / month12Entrees[m]) * 100) : 0,
+  }));
+
+  // Évolution — last 24 months (rolling, Martinique timezone bucketing)
   const months24 = lastNMonths(24);
   const month24Map: Record<string, number> = Object.fromEntries(months24.map((m) => [m, 0]));
   for (const t of allTickets24) {
-    const key = `${t.createdAt.getFullYear()}-${String(t.createdAt.getMonth() + 1).padStart(2, "0")}`;
+    const key = mtnMonthKey(t.createdAt);
     if (month24Map[key] !== undefined) month24Map[key]++;
   }
   const evolution = months24.map((m) => ({ month: monthLabel(m), count: month24Map[m] }));
@@ -167,6 +199,8 @@ export async function GET(request: NextRequest) {
       parStatut,
       parMarque,
       parMois,
+      parMoisSorties,
+      parMoisTaux,
       evolution,
       tickets: ticketsList,
     },
