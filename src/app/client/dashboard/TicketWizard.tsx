@@ -115,6 +115,13 @@ function Step1({
 }) {
   const fileRef = useRef<HTMLInputElement>(null);
   const [photoLoading, setPhotoLoading] = useState(false);
+  const [marqueSelect, setMarqueSelect] = useState(
+    ["Bugnot GTS", "Honda", "Husqvarna", "KIVA", "OREC", "RAPID", "STIHL", "VIKING"].includes(data.marque)
+      ? data.marque
+      : data.marque
+      ? "Autre"
+      : ""
+  );
 
   const canNext = data.materiel.trim() && data.marque.trim() && data.modele.trim() && data.panneDeclaree.trim();
 
@@ -154,14 +161,32 @@ function Step1({
           <label className="block text-[13px] font-semibold mb-1.5" style={{ color: INK }}>
             Marque <span style={{ color: ORANGE }}>*</span>
           </label>
-          <input
-            type="text"
-            value={data.marque}
-            onChange={(e) => onChange({ marque: e.target.value })}
-            placeholder="ex: STIHL"
+          <select
+            value={marqueSelect}
+            onChange={(e) => {
+              setMarqueSelect(e.target.value);
+              if (e.target.value !== "Autre") onChange({ marque: e.target.value });
+              else onChange({ marque: "" });
+            }}
             className={inputCls}
             style={{ ...inputStyle, ...focusOrange }}
-          />
+          >
+            <option value="">Sélectionner…</option>
+            {["Bugnot GTS", "Honda", "Husqvarna", "KIVA", "OREC", "RAPID", "STIHL", "VIKING"].map((b) => (
+              <option key={b} value={b}>{b}</option>
+            ))}
+            <option value="Autre">Autre</option>
+          </select>
+          {marqueSelect === "Autre" && (
+            <input
+              type="text"
+              value={data.marque}
+              placeholder="Préciser la marque"
+              className={inputCls + " mt-2"}
+              style={{ ...inputStyle, ...focusOrange }}
+              onChange={(e) => onChange({ marque: e.target.value })}
+            />
+          )}
         </div>
         <div>
           <label className="block text-[13px] font-semibold mb-1.5" style={{ color: INK }}>
