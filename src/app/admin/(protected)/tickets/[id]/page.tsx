@@ -10,6 +10,14 @@ import { StatusTimeline } from "@/components/client/StatusTimeline";
 import { ChatPanel } from "@/components/ui/ChatPanel";
 import { formatDate, formatDateTime, STATUT_LABELS } from "@/lib/utils";
 
+interface TechnicianInfo {
+  id: string;
+  prenom: string;
+  nom: string;
+  initiales: string;
+  couleur: string;
+}
+
 interface TicketDetail {
   id: string;
   numero: string;
@@ -32,7 +40,7 @@ interface TicketDetail {
     email: string;
     telephone?: string;
   };
-  technicien?: { id: string; nom: string; email: string } | null;
+  technicien?: TechnicianInfo | null;
   historique: { id: string; statut: string; note?: string; createdAt: string }[];
 }
 
@@ -41,8 +49,10 @@ const STATUTS = ["RECU", "DIAGNOSTIC", "ATTENTE_PIECES", "EN_REPARATION", "PRET"
 export default function TicketDetailPage() {
   const params = useParams();
   const router = useRouter();
-  const [ticket, setTicket] = useState<TicketDetail | null>(null);
-  const [loading, setLoading] = useState(true);
+  const [ticket, setTicket]         = useState<TicketDetail | null>(null);
+  const [loading, setLoading]       = useState(true);
+  const [technicians, setTechnicians] = useState<TechnicianInfo[]>([]);
+  const [assignLoading, setAssignLoading] = useState(false);
   const [activeModal, setActiveModal] = useState<"status" | "email" | "whatsapp" | null>(null);
 
   const fetchTicket = async () => {
@@ -52,6 +62,31 @@ export default function TicketDetailPage() {
   };
 
   useEffect(() => { fetchTicket(); }, [params.id]);
+
+  useEffect(() => {
+    fetch("/api/admin/technicians")
+      .then((r) => r.json())
+      .then(setTechnicians)
+      .catch(() => {});
+  }, []);
+
+  const assignTechnician = async (technicienId: string | null) => {
+    if (!ticket) return;
+    setAssignLoading(true);
+    try {
+      const res = await fetch(`/api/admin/tickets/${ticket.id}/technician`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ technicienId }),
+      });
+      if (res.ok) {
+        const updated = await res.json();
+        setTicket((prev) => prev ? { ...prev, technicien: updated.technicien } : prev);
+      }
+    } finally {
+      setAssignLoading(false);
+    }
+  };
 
   if (loading) {
     return (
@@ -160,7 +195,17 @@ export default function TicketDetailPage() {
               {ticket.technicien && (
                 <div>
                   <p className="text-gray-500 text-xs uppercase tracking-wide mb-1">Technicien</p>
-                  <p className="font-medium text-gray-900">{ticket.technicien.nom}</p>
+                  <div className="flex items-center gap-2">
+                    <span
+                      className="w-6 h-6 rounded-full text-[10px] font-bold flex items-center justify-center text-white shrink-0"
+                      style={{ backgroundColor: ticket.technicien.couleur }}
+                    >
+                      {ticket.technicien.initiales}
+                    </span>
+                    <p className="font-medium text-gray-900">
+                      {ticket.technicien.prenom} {ticket.technicien.nom}
+                    </p>
+                  </div>
                 </div>
               )}
             </div>
@@ -251,6 +296,41 @@ export default function TicketDetailPage() {
                   </a>
                 )}
               </div>
+            </div>
+          </div>
+
+          {/* Technician assignment */}
+          <div className="bg-white rounded-xl border border-gray-100 shadow-sm p-6">
+            <h2 className="font-semibold text-gray-900 mb-4">Technicien assigné</h2>
+            <div className="space-y-3">
+              {ticket.technicien && (
+                <div className="flex items-center gap-3 p-3 rounded-lg bg-gray-50">
+                  <span
+                    className="w-9 h-9 rounded-full text-sm font-bold flex items-center justify-center text-white shrink-0"
+                    style={{ backgroundColor: ticket.technicien.couleur }}
+                  >
+                    {ticket.technicien.initiales}
+                  </span>
+                  <div className="min-w-0">
+                    <p className="text-sm font-semibold text-gray-900">
+                      {ticket.technicien.prenom} {ticket.technicien.nom}
+                    </p>
+                  </div>
+                </div>
+              )}
+              <select
+                value={ticket.technicien?.id ?? ""}
+                onChange={(e) => assignTechnician(e.target.value || null)}
+                disabled={assignLoading}
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-navy-500 bg-white disabled:opacity-60"
+              >
+                <option value="">— Non assigné —</option>
+                {technicians.map((t) => (
+                  <option key={t.id} value={t.id}>
+                    {t.initiales} · {t.prenom} {t.nom}
+                  </option>
+                ))}
+              </select>
             </div>
           </div>
 

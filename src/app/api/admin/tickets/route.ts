@@ -36,7 +36,7 @@ export async function GET(request: NextRequest) {
     orderBy: { createdAt: "desc" },
     include: {
       client: true,
-      technicien: { select: { id: true, nom: true } },
+      technicien: { select: { id: true, prenom: true, nom: true, initiales: true, couleur: true } },
       _count: { select: { messages: { where: { senderType: "CLIENT", readAt: null } } } },
     },
   });
@@ -94,7 +94,7 @@ export async function POST(request: NextRequest) {
           },
         },
       },
-      include: { client: true, technicien: { select: { nom: true } } },
+      include: { client: true, technicien: { select: { id: true, prenom: true, nom: true, initiales: true, couleur: true } } },
     });
 
     return NextResponse.json(ticket, { status: 201, headers: noCacheHeaders() });

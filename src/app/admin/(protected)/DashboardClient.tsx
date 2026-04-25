@@ -24,7 +24,7 @@ interface RecentTicket {
   statut: string;
   createdAt: string;
   client: { nom: string; prenom: string };
-  technicien?: { nom: string } | null;
+  technicien?: { nom: string; initiales: string; couleur: string } | null;
 }
 
 interface TodayRdv {
@@ -69,13 +69,6 @@ function getBusinessHours(dow: number): { morning: number[]; afternoon: number[]
 }
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
-
-function initials(nom: string): string {
-  const parts = nom.trim().split(/\s+/).filter(Boolean);
-  if (parts.length === 0) return "?";
-  if (parts.length === 1) return parts[0].slice(0, 2).toUpperCase();
-  return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
-}
 
 function rdvHour(dateHeure: string): number {
   const hm = new Date(dateHeure).toLocaleTimeString("fr-FR", {
@@ -218,10 +211,11 @@ function KanbanColumn({
               </span>
               {ticket.technicien && (
                 <span
-                  className="w-5 h-5 rounded-full text-[9px] font-bold flex items-center justify-center shrink-0"
-                  style={{ backgroundColor: `${color}22`, color }}
+                  className="w-5 h-5 rounded-full text-[9px] font-bold flex items-center justify-center text-white shrink-0"
+                  style={{ backgroundColor: ticket.technicien.couleur }}
+                  title={ticket.technicien.nom}
                 >
-                  {initials(ticket.technicien.nom)}
+                  {ticket.technicien.initiales}
                 </span>
               )}
             </div>

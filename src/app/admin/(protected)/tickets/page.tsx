@@ -26,7 +26,7 @@ interface Ticket {
   createdAt: string;
   dateEstimee?: string;
   client: Client;
-  technicien?: { id: string; nom: string } | null;
+  technicien?: { id: string; prenom: string; nom: string; initiales: string; couleur: string } | null;
   _count?: { messages: number };
 }
 
@@ -152,6 +152,15 @@ export default function TicketsPage() {
                         {ticket._count!.messages}
                       </span>
                     )}
+                    {ticket.technicien && (
+                      <span
+                        className="w-5 h-5 rounded-full text-[9px] font-bold flex items-center justify-center text-white shrink-0"
+                        style={{ backgroundColor: ticket.technicien.couleur }}
+                        title={`${ticket.technicien.prenom} ${ticket.technicien.nom}`}
+                      >
+                        {ticket.technicien.initiales}
+                      </span>
+                    )}
                   </div>
                   <p className="text-sm font-medium text-gray-900">
                     {ticket.client.prenom} {ticket.client.nom}
@@ -159,10 +168,7 @@ export default function TicketsPage() {
                   <p className="text-xs text-gray-500 mt-0.5">
                     {ticket.marque} {ticket.modele} — {ticket.materiel}
                   </p>
-                  <p className="text-xs text-gray-400 mt-1">
-                    {formatDate(ticket.createdAt)}
-                    {ticket.technicien && ` · ${ticket.technicien.nom}`}
-                  </p>
+                  <p className="text-xs text-gray-400 mt-1">{formatDate(ticket.createdAt)}</p>
                 </div>
                 <svg className="w-4 h-4 text-gray-300 flex-shrink-0 mt-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
@@ -232,8 +238,22 @@ export default function TicketsPage() {
                       <StatusBadge statut={ticket.statut} />
                     </td>
                     <td className="px-6 py-4 text-sm text-gray-500">{formatDate(ticket.createdAt)}</td>
-                    <td className="px-6 py-4 text-sm text-gray-500">
-                      {ticket.technicien?.nom || <span className="text-gray-300">—</span>}
+                    <td className="px-6 py-4">
+                      {ticket.technicien ? (
+                        <div className="flex items-center gap-2">
+                          <span
+                            className="w-7 h-7 rounded-full text-[10px] font-bold flex items-center justify-center text-white shrink-0"
+                            style={{ backgroundColor: ticket.technicien.couleur }}
+                          >
+                            {ticket.technicien.initiales}
+                          </span>
+                          <span className="text-sm text-gray-700">
+                            {ticket.technicien.prenom} {ticket.technicien.nom}
+                          </span>
+                        </div>
+                      ) : (
+                        <span className="text-gray-300">—</span>
+                      )}
                     </td>
                     <td className="px-6 py-4 text-right">
                       <Link

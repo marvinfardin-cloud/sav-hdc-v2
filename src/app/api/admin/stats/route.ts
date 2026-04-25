@@ -51,7 +51,7 @@ export async function GET(request: NextRequest) {
         prisma.ticket.findMany({
           take: 10,
           orderBy: { createdAt: "desc" },
-          include: { client: true, technicien: { select: { nom: true } } },
+          include: { client: true, technicien: { select: { nom: true, initiales: true, couleur: true } } },
         }),
         prisma.rendezVous.findMany({
           where: { dateHeure: { gte: today, lt: tomorrow } },

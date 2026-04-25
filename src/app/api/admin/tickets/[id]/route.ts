@@ -16,7 +16,7 @@ export async function GET(
     where: { id: params.id },
     include: {
       client: true,
-      technicien: { select: { id: true, nom: true, email: true } },
+      technicien: { select: { id: true, prenom: true, nom: true, initiales: true, couleur: true } },
       historique: { orderBy: { createdAt: "asc" } },
       photos: true,
     },
@@ -67,7 +67,7 @@ export async function PUT(
       },
       include: {
         client: true,
-        technicien: { select: { id: true, nom: true } },
+        technicien: { select: { id: true, prenom: true, nom: true, initiales: true, couleur: true } },
         historique: { orderBy: { createdAt: "asc" } },
       },
     });

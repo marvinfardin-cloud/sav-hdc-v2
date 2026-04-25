@@ -14,6 +14,7 @@ async function main() {
   await prisma.session.deleteMany();
   await prisma.client.deleteMany();
   await prisma.user.deleteMany();
+  await prisma.technician.deleteMany();
 
   const passwordHash = await bcrypt.hash("Admin2024!", 12);
   const clientPasswordHash = await bcrypt.hash("Client2024!", 12);
@@ -28,25 +29,21 @@ async function main() {
     },
   });
 
-  const tech1 = await prisma.user.create({
-    data: {
-      email: "jean.technicien@hauts-californie.fr",
-      nom: "Jean Technicien",
-      role: Role.TECHNICIEN,
-      passwordHash,
-    },
-  });
-
-  const tech2 = await prisma.user.create({
-    data: {
-      email: "marc.technicien@hauts-californie.fr",
-      nom: "Marc Technicien",
-      role: Role.TECHNICIEN,
-      passwordHash,
-    },
-  });
-
+  void admin;
   console.log("✅ Utilisateurs créés");
+
+  // Create technicians
+  const tech1 = await prisma.technician.create({
+    data: { prenom: "Rodrigue", nom: "Sivatte",  initiales: "RS", couleur: "#3B82F6" },
+  });
+  const tech2 = await prisma.technician.create({
+    data: { prenom: "Jordy",    nom: "Ouly",     initiales: "JO", couleur: "#10B981" },
+  });
+  const tech3 = await prisma.technician.create({
+    data: { prenom: "Jean-Louis", nom: "Boutrin", initiales: "JB", couleur: "#8B5CF6" },
+  });
+
+  console.log("✅ Techniciens créés");
 
   // Create clients
   const clients = await Promise.all([
@@ -165,6 +162,7 @@ async function main() {
       numeroSerie: "20190300063",
       panneDeclaree: "Chaîne se décroche constamment",
       statut: Statut.RECU,
+      technicienId: tech3.id,
       notesPubliques: "Appareil reçu, diagnostic en attente",
     },
   });
@@ -286,10 +284,12 @@ async function main() {
   console.log("🎉 Seed terminé avec succès!");
   console.log("\nComptes créés:");
   console.log(`  Admin: zingzag10@hotmail.fr / Admin2024!`);
-  console.log(`  Tech 1: jean.technicien@hauts-californie.fr / Admin2024!`);
-  console.log(`  Tech 2: marc.technicien@hauts-californie.fr / Admin2024!`);
   console.log(`  Client 1: marie.dupont@email.com / Client2024!`);
   console.log(`  Client 2: jean-paul.martin@email.com / Client2024!`);
+  console.log("\nTechniciens créés:");
+  console.log(`  Rodrigue Sivatte (RS) — bleu`);
+  console.log(`  Jordy Ouly (JO) — vert`);
+  console.log(`  Jean-Louis Boutrin (JB) — violet`);
 }
 
 main()

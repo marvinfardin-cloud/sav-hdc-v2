@@ -31,8 +31,17 @@ model User {
   role         Role      @default(TECHNICIEN)
   passwordHash String
   createdAt    DateTime  @default(now())
-  tickets      Ticket[]
   sessions     Session[]
+}
+
+model Technician {
+  id        String   @id @default(cuid())
+  prenom    String
+  nom       String
+  initiales String
+  couleur   String
+  createdAt DateTime @default(now())
+  tickets   Ticket[]
 }
 
 model Client {
@@ -66,7 +75,7 @@ model Ticket {
   notesPubliques String?
   notesPrivees   String?
   technicienId   String?
-  technicien     User?        @relation(fields: [technicienId], references: [id])
+  technicien     Technician?  @relation(fields: [technicienId], references: [id])
   createdAt      DateTime     @default(now())
   updatedAt      DateTime     @updatedAt
   historique     Historique[]
