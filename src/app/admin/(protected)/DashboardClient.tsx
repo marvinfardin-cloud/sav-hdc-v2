@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { formatDate, formatTime, RDV_TYPE_LABELS } from "@/lib/utils";
+import { ResponsiveContainer, LineChart, Line } from "recharts";
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -35,7 +36,7 @@ interface TodayRdv {
   client: { nom: string; prenom: string; telephone?: string };
 }
 
-// ── Status config ─────────────────────────────────────────────────────────────
+// ── Constants ─────────────────────────────────────────────────────────────────
 
 const STATUS_CONFIG: Record<string, { label: string; color: string }> = {
   RECU:           { label: "Reçu",           color: "#3B82F6" },
@@ -48,19 +49,33 @@ const STATUS_CONFIG: Record<string, { label: string; color: string }> = {
 
 const STATUS_ORDER = ["RECU", "DIAGNOSTIC", "ATTENTE_PIECES", "EN_REPARATION", "PRET", "LIVRE"];
 
-const RDV_DARK: Record<string, string> = {
+const RDV_COLOR: Record<string, string> = {
   depot:      "#3b82f6",
   retrait:    "#22c55e",
   diagnostic: "#F47920",
 };
+
+// Hours shown in the time grid
+const GRID_HOURS = [8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18];
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
 function initials(nom: string): string {
   const parts = nom.trim().split(/\s+/).filter(Boolean);
   if (parts.length === 0) return "?";
-  if (parts.length === 1) return (parts[0].slice(0, 2)).toUpperCase();
+  if (parts.length === 1) return parts[0].slice(0, 2).toUpperCase();
   return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
+}
+
+function rdvHour(dateHeure: string): number {
+  const hm = new Date(dateHeure).toLocaleTimeString("fr-FR", {
+    hour: "2-digit", minute: "2-digit", timeZone: "America/Martinique",
+  });
+  return parseInt(hm.split(":")[0], 10);
+}
+
+function mtnToday(): string {
+  return new Date().toLocaleDateString("en-CA", { timeZone: "America/Martinique" });
 }
 
 // ── Spinner ───────────────────────────────────────────────────────────────────
@@ -74,13 +89,35 @@ function Spinner() {
   );
 }
 
+// ── SparkLine ─────────────────────────────────────────────────────────────────
+
+function SparkLine({ data }: { data: number[] }) {
+  if (data.length < 2) return null;
+  const points = data.map((count, i) => ({ i, count }));
+  return (
+    <ResponsiveContainer width="100%" height={32}>
+      <LineChart data={points} margin={{ top: 2, right: 2, left: 2, bottom: 2 }}>
+        <Line
+          type="monotone"
+          dataKey="count"
+          stroke="#F47920"
+          strokeWidth={1.5}
+          dot={false}
+          isAnimationActive={false}
+        />
+      </LineChart>
+    </ResponsiveContainer>
+  );
+}
+
 // ── KPI Card ──────────────────────────────────────────────────────────────────
 
 function KpiCard({
-  label, value, sub, accentColor, icon, href,
+  label, value, sub, accentColor, icon, href, sparkData,
 }: {
   label: string; value: number; sub: string;
   accentColor: string; icon: React.ReactNode; href: string;
+  sparkData: number[];
 }) {
   return (
     <Link
@@ -99,8 +136,12 @@ function KpiCard({
       <p className="text-3xl font-bold text-white leading-none" style={{ letterSpacing: "-1.5px", fontVariantNumeric: "tabular-nums" }}>
         {value}
       </p>
-      <p className="text-xs text-zinc-600 mt-1.5">{sub}</p>
-      <div className="mt-3 pt-3 border-t border-[#1a1a1a] flex items-center justify-between">
+      <p className="text-xs text-zinc-600 mt-1">{sub}</p>
+      {/* Sparkline */}
+      <div className="mt-1 -mx-1">
+        <SparkLine data={sparkData} />
+      </div>
+      <div className="pt-2 border-t border-[#1a1a1a] flex items-center justify-between">
         <span className="text-[11px] font-semibold" style={{ color: accentColor }}>Voir les détails</span>
         <svg width="12" height="12" viewBox="0 0 24 24" fill="none">
           <path d="m9 6 6 6-6 6" stroke={accentColor} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
@@ -141,7 +182,6 @@ function KanbanColumn({
 
   return (
     <div className="flex-none w-44">
-      {/* Column header */}
       <div className="flex items-center justify-between mb-2.5 px-0.5">
         <div className="flex items-center gap-1.5 min-w-0">
           <span className="w-2 h-2 rounded-full shrink-0" style={{ backgroundColor: color }} />
@@ -155,19 +195,15 @@ function KanbanColumn({
         </span>
       </div>
 
-      {/* Cards */}
       <div className="space-y-1.5">
         {sorted.map((ticket) => (
           <Link
             key={ticket.id}
             href={`/admin/tickets/${ticket.id}`}
-            className="block bg-[#111111] border border-[#1f1f1f] rounded-lg p-2.5 hover:border-[#2a2a2a] transition-colors group"
+            className="block bg-[#161616] border border-[#252525] rounded-lg p-2.5 hover:border-[#333] transition-colors"
           >
             <div className="flex items-center justify-between mb-1">
-              <span
-                className="text-[10px] font-mono font-bold"
-                style={{ color: "#F47920" }}
-              >
+              <span className="text-[10px] font-mono font-bold" style={{ color: "#F47920" }}>
                 {ticket.numero}
               </span>
               {ticket.technicien && (
@@ -188,18 +224,17 @@ function KanbanColumn({
           </Link>
         ))}
 
-        {/* Placeholder when no recent tickets in this column */}
         {sorted.length === 0 && count === 0 && (
-          <div className="border border-dashed border-[#1f1f1f] rounded-lg px-2 py-4 text-center">
-            <p className="text-[10px] text-zinc-800">Vide</p>
+          <div className="border border-dashed border-[#252525] rounded-lg px-2 py-4 text-center">
+            <p className="text-[10px] text-zinc-700">Vide</p>
           </div>
         )}
         {sorted.length === 0 && count > 0 && (
           <Link
             href={`/admin/tickets?status=${statut}`}
-            className="block border border-dashed border-[#1f1f1f] rounded-lg px-2 py-4 text-center hover:border-[#2a2a2a] transition-colors"
+            className="block border border-dashed border-[#252525] rounded-lg px-2 py-4 text-center hover:border-[#333] transition-colors"
           >
-            <p className="text-[10px] text-zinc-600">
+            <p className="text-[10px]" style={{ color }}>
               {count} ticket{count > 1 ? "s" : ""}
             </p>
           </Link>
@@ -209,13 +244,87 @@ function KanbanColumn({
   );
 }
 
+// ── Time grid ─────────────────────────────────────────────────────────────────
+
+function TimeGrid({ rdvs }: { rdvs: TodayRdv[] }) {
+  // Group RDVs by their hour bucket (floor to hour)
+  const byHour: Record<number, TodayRdv[]> = {};
+  for (const rdv of rdvs) {
+    const h = rdvHour(rdv.dateHeure);
+    if (!byHour[h]) byHour[h] = [];
+    byHour[h].push(rdv);
+  }
+
+  return (
+    <div className="space-y-0.5">
+      {GRID_HOURS.map((h) => {
+        const slot = byHour[h] ?? [];
+        const timeLabel = `${String(h).padStart(2, "0")}:00`;
+
+        return (
+          <div key={h}>
+            {slot.length === 0 ? (
+              /* Empty slot */
+              <div className="flex items-center gap-3 py-1.5 group">
+                <span className="text-[11px] font-mono text-zinc-700 w-10 shrink-0 tabular-nums">
+                  {timeLabel}
+                </span>
+                <div className="flex-1 h-6 border border-dashed border-[#1e1e1e] rounded-md group-hover:border-[#2a2a2a] transition-colors" />
+              </div>
+            ) : (
+              /* Filled slot(s) */
+              slot.map((rdv) => {
+                const color = RDV_COLOR[rdv.type] ?? "#6b7280";
+                return (
+                  <div key={rdv.id} className="flex items-stretch gap-3 py-1">
+                    <span className="text-[11px] font-mono text-zinc-400 w-10 shrink-0 tabular-nums pt-1.5">
+                      {formatTime(rdv.dateHeure)}
+                    </span>
+                    <div
+                      className="flex-1 rounded-lg px-3 py-2 flex items-center justify-between gap-2 min-w-0"
+                      style={{
+                        backgroundColor: `${color}12`,
+                        borderLeft: `2px solid ${color}`,
+                      }}
+                    >
+                      <div className="min-w-0">
+                        <p className="text-xs font-semibold text-zinc-200 truncate">
+                          {rdv.client.prenom} {rdv.client.nom}
+                        </p>
+                        {rdv.client.telephone && (
+                          <p className="text-[10px] text-zinc-600">{rdv.client.telephone}</p>
+                        )}
+                        {rdv.notes && (
+                          <p className="text-[10px] text-zinc-600 truncate">{rdv.notes}</p>
+                        )}
+                      </div>
+                      <span
+                        className="text-[10px] font-semibold px-1.5 py-0.5 rounded-full shrink-0"
+                        style={{ color, backgroundColor: `${color}20` }}
+                      >
+                        {RDV_TYPE_LABELS[rdv.type] ?? rdv.type}
+                      </span>
+                    </div>
+                  </div>
+                );
+              })
+            )}
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
 // ── Main dashboard client ─────────────────────────────────────────────────────
 
 export default function DashboardClient({ userName }: { userName: string }) {
-  const [stats, setStats]     = useState<StatsData | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [sortAsc, setSortAsc] = useState(false); // false = newest first (API default)
+  const [stats, setStats]         = useState<StatsData | null>(null);
+  const [loading, setLoading]     = useState(true);
+  const [sortAsc, setSortAsc]     = useState(false);
+  const [sparkData, setSparkData] = useState<number[]>([]);
 
+  // Primary dashboard fetch (unchanged)
   useEffect(() => {
     fetch("/api/admin/stats")
       .then((r) => r.json())
@@ -223,18 +332,38 @@ export default function DashboardClient({ userName }: { userName: string }) {
       .finally(() => setLoading(false));
   }, []);
 
-  // Date in Martinique timezone: "vendredi 24 avril"
+  // Secondary fetch: last 7 days daily ticket entries for sparklines
+  useEffect(() => {
+    const today = mtnToday();
+    const d = new Date(today + "T12:00:00");
+    const days: string[] = [];
+    for (let i = 6; i >= 0; i--) {
+      const dd = new Date(d);
+      dd.setDate(dd.getDate() - i);
+      days.push(dd.toLocaleDateString("en-CA"));
+    }
+    fetch(`/api/admin/stats?from=${days[0]}&to=${days[days.length - 1]}`)
+      .then((r) => r.json())
+      .then((data) => {
+        const map: Record<string, number> = Object.fromEntries(days.map((d) => [d, 0]));
+        for (const t of data.tickets ?? []) {
+          const day = new Date(t.dateEntree).toLocaleDateString("en-CA", {
+            timeZone: "America/Martinique",
+          });
+          if (day in map) map[day]++;
+        }
+        setSparkData(days.map((d) => map[d]));
+      })
+      .catch(() => {});
+  }, []);
+
   const dateStr = new Date().toLocaleDateString("fr-FR", {
-    weekday: "long",
-    day: "numeric",
-    month: "long",
+    weekday: "long", day: "numeric", month: "long",
     timeZone: "America/Martinique",
   });
 
-  // First word of nom as greeting name
   const prenom = userName.split(/\s+/)[0] ?? userName;
 
-  // KPI derivations (preserved from original)
   const activeTickets = stats?.ticketsByStatus
     .filter((s) => s.statut !== "LIVRE")
     .reduce((a, b) => a + b._count, 0) ?? 0;
@@ -245,13 +374,11 @@ export default function DashboardClient({ userName }: { userName: string }) {
 
       {/* ── Header ── */}
       <div className="flex flex-wrap items-center justify-between gap-3 mb-6">
-        <div>
-          <h1 className="text-xl font-bold text-white tracking-tight">
-            Bonjour {prenom}
-            <span className="text-zinc-600 font-normal"> · </span>
-            <span className="text-zinc-400 font-normal capitalize text-base">{dateStr}</span>
-          </h1>
-        </div>
+        <h1 className="text-xl font-bold text-white tracking-tight">
+          Bonjour {prenom}
+          <span className="text-zinc-600 font-normal"> · </span>
+          <span className="text-zinc-400 font-normal capitalize text-base">{dateStr}</span>
+        </h1>
         <Link
           href="/admin/tickets"
           className="inline-flex items-center gap-2 px-4 py-2 rounded-lg text-white text-sm font-semibold transition-all hover:opacity-90 active:scale-[0.98]"
@@ -280,6 +407,7 @@ export default function DashboardClient({ userName }: { userName: string }) {
               sub="Tous statuts"
               accentColor="#F47920"
               href="/admin/tickets"
+              sparkData={sparkData}
               icon={
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
                   <path d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"
@@ -293,6 +421,7 @@ export default function DashboardClient({ userName }: { userName: string }) {
               sub="Tickets actifs"
               accentColor="#F59E0B"
               href="/admin/tickets"
+              sparkData={sparkData}
               icon={
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
                   <circle cx="12" cy="12" r="9" stroke="#F59E0B" strokeWidth="1.7"/>
@@ -306,6 +435,7 @@ export default function DashboardClient({ userName }: { userName: string }) {
               sub="À notifier"
               accentColor="#22C55E"
               href="/admin/tickets?status=PRET"
+              sparkData={sparkData}
               icon={
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
                   <path d="M4 12.5 9 17.5 20 6.5" stroke="#22C55E" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
@@ -318,6 +448,7 @@ export default function DashboardClient({ userName }: { userName: string }) {
               sub="Rendez-vous du jour"
               accentColor="#3B82F6"
               href="/admin/planning"
+              sparkData={sparkData}
               icon={
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
                   <rect x="4" y="5.5" width="16" height="14.5" rx="2.2" stroke="#3B82F6" strokeWidth="1.7"/>
@@ -351,9 +482,9 @@ export default function DashboardClient({ userName }: { userName: string }) {
               </div>
             </div>
 
-            {/* Scrollable kanban */}
-            <div className="overflow-x-auto -mx-4 px-4 sm:-mx-5 sm:px-5">
-              <div className="flex gap-3 min-w-max pb-1">
+            {/* Kanban: simple overflow-x-auto, no negative-margin clipping */}
+            <div className="overflow-x-auto pb-2">
+              <div className="flex gap-3" style={{ minWidth: "max-content" }}>
                 {STATUS_ORDER.map((statut) => {
                   const count = stats?.ticketsByStatus.find((x) => x.statut === statut)?._count ?? 0;
                   const tickets = stats?.recentTickets.filter((t) => t.statut === statut) ?? [];
@@ -371,7 +502,7 @@ export default function DashboardClient({ userName }: { userName: string }) {
             </div>
           </div>
 
-          {/* ── Bottom section: recent tickets + today's RDVs ── */}
+          {/* ── Bottom: recent tickets + RDV time grid ── */}
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
 
             {/* Tickets récents */}
@@ -395,9 +526,7 @@ export default function DashboardClient({ userName }: { userName: string }) {
                     >
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center gap-2 mb-0.5 flex-wrap">
-                          <span className="text-[11px] font-mono font-bold text-[#F47920]">
-                            {ticket.numero}
-                          </span>
+                          <span className="text-[11px] font-mono font-bold text-[#F47920]">{ticket.numero}</span>
                           <StatusBadge statut={ticket.statut} />
                         </div>
                         <p className="text-sm font-medium text-zinc-300 truncate">
@@ -415,7 +544,7 @@ export default function DashboardClient({ userName }: { userName: string }) {
               )}
             </div>
 
-            {/* Rendez-vous du jour */}
+            {/* Rendez-vous du jour — time grid */}
             <div className="bg-[#111111] border border-[#1f1f1f] rounded-xl overflow-hidden flex flex-col">
               <div className="flex items-center justify-between px-4 py-3.5 border-b border-[#1a1a1a]">
                 <h2 className="text-sm font-semibold text-white">Rendez-vous du jour</h2>
@@ -424,75 +553,35 @@ export default function DashboardClient({ userName }: { userName: string }) {
                 </Link>
               </div>
 
-              {(!stats?.todayRdvs || stats.todayRdvs.length === 0) ? (
-                <div className="flex flex-col items-center justify-center gap-3 py-10 flex-1">
-                  <p className="text-sm text-zinc-700">Aucun rendez-vous aujourd&apos;hui</p>
-                  <Link
-                    href="/admin/planning"
-                    className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-white text-xs font-semibold hover:opacity-90 transition-opacity"
-                    style={{ backgroundColor: "#F47920" }}
-                  >
-                    <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
-                    </svg>
-                    Planifier un RDV
-                  </Link>
-                </div>
-              ) : (
-                <>
-                  <div className="divide-y divide-[#161616] flex-1">
-                    {stats.todayRdvs.map((rdv) => {
-                      const rdvColor = RDV_DARK[rdv.type] ?? "#6b7280";
-                      return (
-                        <div key={rdv.id} className="flex items-start gap-3 px-4 py-3">
-                          {/* Time block */}
-                          <div
-                            className="shrink-0 w-12 rounded-lg py-1.5 text-center"
-                            style={{ backgroundColor: `${rdvColor}15` }}
-                          >
-                            <p className="text-[13px] font-bold leading-none" style={{ color: rdvColor }}>
-                              {formatTime(rdv.dateHeure)}
-                            </p>
-                          </div>
-                          {/* Details */}
-                          <div className="flex-1 min-w-0">
-                            <div className="flex items-center gap-2 flex-wrap mb-0.5">
-                              <p className="text-sm font-semibold text-zinc-200">
-                                {rdv.client.prenom} {rdv.client.nom}
-                              </p>
-                              <span
-                                className="text-[10px] font-semibold px-1.5 py-0.5 rounded-full"
-                                style={{ color: rdvColor, backgroundColor: `${rdvColor}18` }}
-                              >
-                                {RDV_TYPE_LABELS[rdv.type] ?? rdv.type}
-                              </span>
-                            </div>
-                            {rdv.client.telephone && (
-                              <p className="text-[11px] text-zinc-600">{rdv.client.telephone}</p>
-                            )}
-                            {rdv.notes && (
-                              <p className="text-[11px] text-zinc-600 truncate">{rdv.notes}</p>
-                            )}
-                          </div>
-                        </div>
-                      );
-                    })}
-                  </div>
-                  {/* Bottom CTA */}
-                  <div className="px-4 py-3 border-t border-[#1a1a1a]">
-                    <Link
-                      href="/admin/planning"
-                      className="w-full inline-flex items-center justify-center gap-2 px-3 py-2 rounded-lg text-white text-xs font-semibold hover:opacity-90 transition-opacity"
-                      style={{ backgroundColor: "#F47920" }}
-                    >
-                      <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+              <div className="flex-1 px-4 py-3 overflow-y-auto" style={{ maxHeight: 420 }}>
+                {(!stats?.todayRdvs || stats.todayRdvs.length === 0) ? (
+                  <div className="flex flex-col items-center justify-center gap-3 py-8 text-center">
+                    <div className="w-9 h-9 rounded-xl flex items-center justify-center bg-[#1a1a1a]">
+                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
+                        <rect x="4" y="5.5" width="16" height="14.5" rx="2.2" stroke="#3B82F6" strokeWidth="1.7"/>
+                        <path d="M4 10h16M8.5 3.5v4M15.5 3.5v4" stroke="#3B82F6" strokeWidth="1.7" strokeLinecap="round"/>
                       </svg>
-                      Planifier un RDV
-                    </Link>
+                    </div>
+                    <p className="text-sm text-zinc-700">Aucun rendez-vous aujourd&apos;hui</p>
                   </div>
-                </>
-              )}
+                ) : (
+                  <TimeGrid rdvs={stats.todayRdvs} />
+                )}
+              </div>
+
+              {/* "+ Planifier un RDV" always visible at bottom */}
+              <div className="px-4 py-3 border-t border-[#1a1a1a]">
+                <Link
+                  href="/admin/planning"
+                  className="w-full inline-flex items-center justify-center gap-2 px-3 py-2 rounded-lg text-white text-xs font-semibold hover:opacity-90 transition-opacity"
+                  style={{ backgroundColor: "#F47920" }}
+                >
+                  <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+                  </svg>
+                  Planifier un RDV
+                </Link>
+              </div>
             </div>
 
           </div>
