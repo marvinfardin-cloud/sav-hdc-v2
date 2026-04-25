@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
+import { TicketWizard } from "./TicketWizard";
 
 // ── Types ──────────────────────────────────────────────────────────────────────
 
@@ -17,14 +18,6 @@ interface Ticket {
   notesPubliques?: string;
   historique: { id: string; statut: string; note?: string; createdAt: string }[];
   technicien?: { nom: string } | null;
-}
-
-interface NewTicketForm {
-  materiel: string;
-  marque: string;
-  modele: string;
-  numeroSerie: string;
-  panneDeclaree: string;
 }
 
 // ── Design tokens ──────────────────────────────────────────────────────────────
@@ -156,33 +149,20 @@ function ActionBar({ onSubmit }: { onSubmit: () => void }) {
     display: "grid", placeItems: "center", position: "relative",
   };
   return (
-    <div className="grid grid-cols-2 gap-2.5">
-      <button onClick={onSubmit} style={btnStyle}>
-        <div style={sheen} />
+    <button onClick={onSubmit} style={btnStyle}>
+      <div style={sheen} />
+      <div style={{ display: "flex", alignItems: "center", gap: 12, position: "relative" }}>
         <div style={iconWrap}>
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
             <path d="M12 5v14M5 12h14" stroke="#fff" strokeWidth="2" strokeLinecap="round"/>
           </svg>
         </div>
-        <div style={{ position: "relative" }}>
-          <div className="text-[14px] font-bold leading-tight" style={{ letterSpacing: "-0.2px" }}>Soumettre une demande</div>
-          <div className="text-[11.5px] mt-0.5" style={{ opacity: 0.85 }}>Nouvelle panne</div>
+        <div>
+          <div className="text-[14px] font-bold leading-tight" style={{ letterSpacing: "-0.2px" }}>Soumettre une demande de réparation</div>
+          <div className="text-[11.5px] mt-0.5" style={{ opacity: 0.85 }}>Nouvelle panne · choisir un créneau de dépôt</div>
         </div>
-      </button>
-      <Link href="/client/rdv" style={btnStyle}>
-        <div style={sheen} />
-        <div style={iconWrap}>
-          <svg width="17" height="17" viewBox="0 0 24 24" fill="none">
-            <rect x="4" y="5.5" width="16" height="14.5" rx="2.2" stroke="#fff" strokeWidth="1.7"/>
-            <path d="M4 10h16M8.5 3.5v4M15.5 3.5v4" stroke="#fff" strokeWidth="1.7" strokeLinecap="round"/>
-          </svg>
-        </div>
-        <div style={{ position: "relative" }}>
-          <div className="text-[14px] font-bold leading-tight" style={{ letterSpacing: "-0.2px" }}>Prendre RDV</div>
-          <div className="text-[11.5px] mt-0.5" style={{ opacity: 0.85 }}>Atelier · retrait</div>
-        </div>
-      </Link>
-    </div>
+      </div>
+    </button>
   );
 }
 
@@ -359,106 +339,6 @@ function TicketCard({ ticket }: { ticket: Ticket }) {
   );
 }
 
-// ── Create ticket modal ────────────────────────────────────────────────────────
-
-function CreateTicketModal({ onClose, onSuccess }: { onClose: () => void; onSuccess: () => void }) {
-  const [submitting, setSubmitting] = useState(false);
-  const [error, setError] = useState("");
-  const [form, setForm] = useState<NewTicketForm>({ materiel: "", marque: "", modele: "", numeroSerie: "", panneDeclaree: "" });
-
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
-    setForm((p) => ({ ...p, [e.target.name]: e.target.value }));
-  };
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setError("");
-    setSubmitting(true);
-    try {
-      const res = await fetch("/api/tickets", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          materiel: form.materiel, marque: form.marque, modele: form.modele,
-          numeroSerie: form.numeroSerie || undefined, panneDeclaree: form.panneDeclaree,
-        }),
-      });
-      const data = await res.json();
-      if (res.ok) onSuccess();
-      else setError(data.error || "Erreur lors de la soumission");
-    } catch {
-      setError("Erreur de connexion au serveur");
-    } finally {
-      setSubmitting(false);
-    }
-  };
-
-  return (
-    <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center sm:p-4 bg-black/50">
-      <div className="bg-white rounded-t-2xl sm:rounded-2xl shadow-2xl w-full sm:max-w-lg max-h-[90vh] overflow-y-auto">
-        <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100">
-          <h2 className="text-lg font-semibold text-gray-900">Soumettre une demande de réparation</h2>
-          <button onClick={onClose} className="text-gray-400 hover:text-gray-600 p-1 min-w-[44px] min-h-[44px] flex items-center justify-center">
-            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-            </svg>
-          </button>
-        </div>
-        <form onSubmit={handleSubmit} className="px-6 py-5 space-y-4">
-          {error && <div className="p-3 bg-red-50 border border-red-200 rounded-lg text-sm text-red-700">{error}</div>}
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Type de matériel <span className="text-red-500">*</span></label>
-            <input type="text" name="materiel" value={form.materiel} onChange={handleChange} required
-              placeholder="ex: Tondeuse, Débroussailleuse, Tronçonneuse..."
-              className="w-full px-3 py-2.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-orange-400 transition-colors" />
-          </div>
-          <div className="grid grid-cols-2 gap-3">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Marque <span className="text-red-500">*</span></label>
-              <select name="marque" value={form.marque} onChange={handleChange} required
-                className="w-full px-3 py-2.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-orange-400 bg-white transition-colors">
-                <option value="">Sélectionner...</option>
-                {["STIHL", "BUGNOT", "GTS", "KIVA", "OREC", "RAPID"].map((b) => <option key={b} value={b}>{b}</option>)}
-              </select>
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Modèle <span className="text-red-500">*</span></label>
-              <input type="text" name="modele" value={form.modele} onChange={handleChange} required
-                placeholder="ex: FS 55..."
-                className="w-full px-3 py-2.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-orange-400 transition-colors" />
-            </div>
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Numéro de série <span className="text-gray-400 font-normal">(optionnel)</span></label>
-            <input type="text" name="numeroSerie" value={form.numeroSerie} onChange={handleChange}
-              placeholder="ex: MZBB-6130001"
-              className="w-full px-3 py-2.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-orange-400 transition-colors" />
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Description de la panne <span className="text-red-500">*</span></label>
-            <textarea name="panneDeclaree" value={form.panneDeclaree} onChange={handleChange} required rows={4}
-              placeholder="Décrivez le problème en détail: symptômes, quand ça se produit, bruits anormaux..."
-              className="w-full px-3 py-2.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-orange-400 transition-colors resize-none" />
-          </div>
-          <div className="flex gap-3 pt-2">
-            <button type="button" onClick={onClose}
-              className="flex-1 px-4 py-3 border border-gray-300 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors min-h-[44px]">
-              Annuler
-            </button>
-            <button type="submit" disabled={submitting}
-              className="flex-1 text-white px-4 py-3 rounded-lg text-sm font-medium disabled:opacity-50 flex items-center justify-center gap-2 min-h-[44px]"
-              style={{ backgroundColor: ORANGE }}>
-              {submitting ? (
-                <><svg className="animate-spin w-4 h-4" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"/><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/></svg>Envoi...</>
-              ) : "Soumettre la demande"}
-            </button>
-          </div>
-        </form>
-      </div>
-    </div>
-  );
-}
-
 // ── Page ───────────────────────────────────────────────────────────────────────
 
 export default function ClientDashboard() {
@@ -573,7 +453,7 @@ export default function ClientDashboard() {
       )}
 
       {showModal && (
-        <CreateTicketModal onClose={() => setShowModal(false)} onSuccess={() => { setShowModal(false); loadData(); }} />
+        <TicketWizard onClose={() => setShowModal(false)} onSuccess={() => { setShowModal(false); loadData(); }} />
       )}
     </div>
   );

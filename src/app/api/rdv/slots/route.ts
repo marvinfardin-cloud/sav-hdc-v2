@@ -2,9 +2,10 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { noCacheHeaders } from "@/lib/utils";
 
-// Available hours: 07:00-12:00 and 13:00-16:00, 30min slots
+// Mon–Thu: 07:00–11:30 + 13:00–15:30; Fri: 07:00–11:30 + 13:00–14:30
 const MORNING_SLOTS = [7, 7.5, 8, 8.5, 9, 9.5, 10, 10.5, 11, 11.5];
-const AFTERNOON_SLOTS = [13, 13.5, 14, 14.5, 15, 15.5];
+const AFTERNOON_SLOTS     = [13, 13.5, 14, 14.5, 15, 15.5];
+const AFTERNOON_SLOTS_FRI = [13, 13.5, 14, 14.5];
 
 function decimalToTime(decimal: number): string {
   const hours = Math.floor(decimal);
@@ -37,7 +38,8 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ slots: [] }, { headers: noCacheHeaders() });
   }
 
-  const allSlots = [...MORNING_SLOTS, ...AFTERNOON_SLOTS];
+  const afternoonSlots = dayOfWeek === 5 ? AFTERNOON_SLOTS_FRI : AFTERNOON_SLOTS;
+  const allSlots = [...MORNING_SLOTS, ...afternoonSlots];
 
   const existingRdvs = await prisma.rendezVous.findMany({
     where: {

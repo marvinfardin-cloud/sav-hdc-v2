@@ -173,6 +173,55 @@ export async function sendStatusUpdate(
   });
 }
 
+export async function sendTicketWithRdvConfirmation(
+  email: string,
+  prenom: string,
+  data: {
+    ticketNumero: string;
+    marque: string;
+    modele: string;
+    materiel: string;
+    panneDeclaree: string;
+    rdvDateHeure: Date;
+  }
+) {
+  const dateStr = data.rdvDateHeure.toLocaleDateString("fr-FR", {
+    weekday: "long", day: "numeric", month: "long", year: "numeric",
+    timeZone: "America/Martinique",
+  });
+  const heureStr = data.rdvDateHeure.toLocaleTimeString("fr-FR", {
+    hour: "2-digit", minute: "2-digit",
+    timeZone: "America/Martinique",
+  });
+
+  const content = `
+    <h2>Bonjour ${prenom},</h2>
+    <p>Votre demande de réparation a bien été enregistrée et votre rendez-vous de dépôt est confirmé !</p>
+    <div class="info-box">
+      <p><strong>N° de ticket :</strong> ${data.ticketNumero}</p>
+      <p><strong>Matériel :</strong> ${data.marque} ${data.modele} (${data.materiel})</p>
+      <p><strong>Panne déclarée :</strong> ${data.panneDeclaree}</p>
+    </div>
+    <div class="info-box" style="border-left-color: #F47920;">
+      <p><strong>Rendez-vous de dépôt</strong></p>
+      <p><strong>Date :</strong> ${dateStr}</p>
+      <p><strong>Heure :</strong> ${heureStr}</p>
+    </div>
+    <p>Merci de vous présenter à l'heure indiquée avec votre matériel.</p>
+    <p>En cas d'empêchement, merci de nous contacter dès que possible.</p>
+    <div style="text-align: center; margin: 24px 0;">
+      <a href="${APP_URL}/client/dashboard" class="btn">Suivre ma réparation</a>
+    </div>
+  `;
+
+  await transporter.sendMail({
+    from: FROM,
+    to: email,
+    subject: `Confirmation de votre demande — ${data.ticketNumero}`,
+    html: baseTemplate(content),
+  });
+}
+
 export async function sendCustomEmail(
   email: string,
   prenom: string,

@@ -52,18 +52,6 @@ export default function BottomNav() {
       ),
     },
     {
-      label: "RDV",
-      href: "/client/rdv",
-      active: pathname === "/client/rdv",
-      badge: 0,
-      icon: (c: string) => (
-        <svg width="22" height="22" viewBox="0 0 24 24" fill="none">
-          <rect x="4" y="5.5" width="16" height="14.5" rx="2.2" stroke={c} strokeWidth="1.7" />
-          <path d="M4 10h16M8.5 3.5v4M15.5 3.5v4" stroke={c} strokeWidth="1.7" strokeLinecap="round" />
-        </svg>
-      ),
-    },
-    {
       label: "Compte",
       href: "/client/compte",
       active: pathname === "/client/compte",
@@ -82,7 +70,7 @@ export default function BottomNav() {
       className="md:hidden fixed bottom-0 left-0 right-0 z-30 border-t"
       style={{ background: "#fff", borderColor: "rgba(15,15,18,0.06)" }}
     >
-      <div className="grid grid-cols-4">
+      <div className="grid grid-cols-3">
         {tabs.map((tab) => {
           const color = tab.active ? ORANGE : INK3;
           return (
