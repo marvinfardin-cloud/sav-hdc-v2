@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import Link from "next/link";
 import { formatDate, formatTime, RDV_TYPE_LABELS } from "@/lib/utils";
 import { ResponsiveContainer, LineChart, Line } from "recharts";
@@ -363,13 +363,22 @@ export default function DashboardClient({ userName }: { userName: string }) {
   const [sortAsc, setSortAsc]     = useState(false);
   const [sparkData, setSparkData] = useState<number[]>([]);
 
-  // Primary dashboard fetch (unchanged)
-  useEffect(() => {
+  // Primary dashboard fetch — initial load + 30s polling
+  const fetchStats = useCallback(() => {
     fetch("/api/admin/stats")
       .then((r) => r.json())
-      .then(setStats)
-      .finally(() => setLoading(false));
+      .then((data) => {
+        setStats(data);
+        setLoading(false);
+      })
+      .catch(() => setLoading(false));
   }, []);
+
+  useEffect(() => {
+    fetchStats();
+    const interval = setInterval(fetchStats, 30000);
+    return () => clearInterval(interval);
+  }, [fetchStats]);
 
   // Secondary fetch: last 7 days daily ticket entries for sparklines
   useEffect(() => {

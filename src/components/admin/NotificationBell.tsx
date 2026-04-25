@@ -22,8 +22,8 @@ interface NotificationBellProps {
 export function NotificationBell({ variant = "dark" }: NotificationBellProps) {
   const [count, setCount]     = useState(0);
   const [tickets, setTickets] = useState<NotifTicket[]>([]);
-  const [open, setOpen]       = useState(false);
-  const [dropPos, setDropPos] = useState({ top: 0, right: 0 });
+  const [open, setOpen]     = useState(false);
+  const [dropStyle, setDropStyle] = useState<React.CSSProperties>({});
   const btnRef = useRef<HTMLButtonElement>(null);
 
   const fetchNotifs = useCallback(() => {
@@ -45,10 +45,14 @@ export function NotificationBell({ variant = "dark" }: NotificationBellProps) {
   const handleToggle = () => {
     if (!open && btnRef.current) {
       const rect = btnRef.current.getBoundingClientRect();
-      setDropPos({
-        top: rect.bottom + 8,
-        right: window.innerWidth - rect.right,
-      });
+      const DROP_W = 320; // w-80
+      const top    = rect.bottom + 8;
+      // Open to the right if there's room, otherwise align to the button's right edge
+      if (window.innerWidth - rect.left >= DROP_W) {
+        setDropStyle({ top, left: rect.left });
+      } else {
+        setDropStyle({ top, right: window.innerWidth - rect.right });
+      }
     }
     setOpen((v) => !v);
   };
@@ -86,13 +90,13 @@ export function NotificationBell({ variant = "dark" }: NotificationBellProps) {
 
       {open && (
         <>
-          {/* Backdrop */}
-          <div className="fixed inset-0 z-40" onClick={handleClose} />
+          {/* Backdrop — above sidebar (z-50) */}
+          <div className="fixed inset-0 z-[998]" onClick={handleClose} />
 
-          {/* Dropdown */}
+          {/* Dropdown — above backdrop */}
           <div
-            className="fixed z-50 w-80 bg-white rounded-xl shadow-2xl border border-gray-100 overflow-hidden"
-            style={{ top: dropPos.top, right: dropPos.right }}
+            className="fixed z-[999] w-80 bg-white rounded-xl shadow-2xl border border-gray-100 overflow-hidden"
+            style={dropStyle}
           >
             {/* Header */}
             <div className="flex items-center justify-between px-4 py-3 border-b border-gray-100">
