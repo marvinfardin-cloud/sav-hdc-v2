@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useState, useEffect } from "react";
+import { NotificationBell } from "./NotificationBell";
 
 const navigation = [
   {
@@ -128,26 +129,32 @@ export function Sidebar({ userName, userRole, isOpen = false, onClose }: Sidebar
         style={{ backgroundColor: "#F47920" }}
       >
         {/* Logo */}
-        <div className="px-6 py-5 border-b border-white/20 flex items-center justify-between">
-          <div className="flex items-center gap-3">
+        <div className="px-4 py-5 border-b border-white/20 flex items-center justify-between gap-2">
+          <div className="flex items-center gap-3 min-w-0">
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img src="/logo.png" className="h-10 w-10 object-contain rounded flex-shrink-0" alt="JardiPro" />
-            <div>
+            <div className="min-w-0">
               <p className="text-white font-semibold text-sm leading-tight">Les Hauts de</p>
               <p className="text-white font-semibold text-sm leading-tight">Californie</p>
               <p className="text-white/70 text-xs">SAV JardiPro</p>
             </div>
           </div>
-          {/* Close button — mobile only */}
-          <button
-            onClick={onClose}
-            className="md:hidden p-1.5 text-white/70 hover:text-white hover:bg-white/20 rounded-lg transition-colors"
-            aria-label="Fermer le menu"
-          >
-            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-            </svg>
-          </button>
+          <div className="flex items-center gap-1 shrink-0">
+            {/* Bell — desktop only (mobile has it in the top bar) */}
+            <div className="hidden md:block">
+              <NotificationBell variant="dark" />
+            </div>
+            {/* Close button — mobile only */}
+            <button
+              onClick={onClose}
+              className="md:hidden p-1.5 text-white/70 hover:text-white hover:bg-white/20 rounded-lg transition-colors"
+              aria-label="Fermer le menu"
+            >
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            </button>
+          </div>
         </div>
 
         {/* Navigation */}

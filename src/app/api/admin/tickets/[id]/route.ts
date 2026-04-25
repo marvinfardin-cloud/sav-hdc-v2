@@ -26,6 +26,11 @@ export async function GET(
     return NextResponse.json({ error: "Ticket introuvable" }, { status: 404, headers: noCacheHeaders() });
   }
 
+  // Mark as viewed by admin (fire-and-forget, don't delay response)
+  if (!ticket.viewedByAdmin) {
+    prisma.ticket.update({ where: { id: params.id }, data: { viewedByAdmin: true } }).catch(() => {});
+  }
+
   return NextResponse.json(ticket, { headers: noCacheHeaders() });
 }
 
