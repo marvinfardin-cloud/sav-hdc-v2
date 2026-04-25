@@ -55,8 +55,18 @@ const RDV_COLOR: Record<string, string> = {
   diagnostic: "#F47920",
 };
 
-// Hours shown in the time grid
-const GRID_HOURS = [8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18];
+// Business hours per day (0=Sun … 6=Sat). Returns hour integers.
+function mtnDayOfWeek(): number {
+  const dateStr = new Date().toLocaleDateString("en-CA", { timeZone: "America/Martinique" });
+  return new Date(dateStr + "T12:00:00").getDay();
+}
+
+function getBusinessHours(dow: number): { morning: number[]; afternoon: number[] } | null {
+  if (dow === 0 || dow === 6) return null; // weekend → closed
+  const morning   = [7, 8, 9, 10, 11];
+  const afternoon = dow === 5 ? [13, 14] : [13, 14, 15]; // Fri vs Mon–Thu
+  return { morning, afternoon };
+}
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
@@ -246,8 +256,79 @@ function KanbanColumn({
 
 // ── Time grid ─────────────────────────────────────────────────────────────────
 
-function TimeGrid({ rdvs }: { rdvs: TodayRdv[] }) {
-  // Group RDVs by their hour bucket (floor to hour)
+// ── Slot box ──────────────────────────────────────────────────────────────────
+
+function SlotBox({ hour, rdvs }: { hour: number; rdvs: TodayRdv[] }) {
+  const timeLabel = `${String(hour).padStart(2, "0")}:00`;
+  const rdv       = rdvs[0];
+  const color     = rdv ? (RDV_COLOR[rdv.type] ?? "#6b7280") : null;
+
+  if (rdv && color) {
+    return (
+      <Link
+        href="/admin/planning"
+        className="block rounded-lg p-2.5 hover:opacity-80 transition-opacity"
+        style={{ backgroundColor: `${color}14`, border: `1px solid ${color}40` }}
+      >
+        <div className="flex items-center justify-between gap-1 mb-1">
+          <span className="text-[11px] font-mono font-bold tabular-nums" style={{ color }}>
+            {formatTime(rdv.dateHeure)}
+          </span>
+          <span
+            className="text-[9px] font-bold px-1 py-0.5 rounded-full shrink-0"
+            style={{ color, backgroundColor: `${color}28` }}
+          >
+            {RDV_TYPE_LABELS[rdv.type] ?? rdv.type}
+          </span>
+        </div>
+        <p className="text-[11px] font-semibold text-zinc-200 truncate">
+          {rdv.client.prenom} {rdv.client.nom}
+        </p>
+        {rdvs.length > 1 && (
+          <p className="text-[10px] text-zinc-600 mt-0.5">+{rdvs.length - 1} autre{rdvs.length > 2 ? "s" : ""}</p>
+        )}
+      </Link>
+    );
+  }
+
+  return (
+    <Link
+      href="/admin/planning"
+      className="block rounded-lg p-2.5 border border-[#252525] hover:border-[#333] hover:bg-white/[0.02] transition-colors"
+    >
+      <p className="text-[11px] font-mono text-zinc-500 tabular-nums">{timeLabel}</p>
+      <p className="text-[10px] text-zinc-700 mt-0.5">Disponible</p>
+    </Link>
+  );
+}
+
+// ── Time grid ─────────────────────────────────────────────────────────────────
+
+function TimeGrid({ rdvs, dow }: { rdvs: TodayRdv[]; dow: number }) {
+  const hours = getBusinessHours(dow);
+
+  // Weekend closed state
+  if (!hours) {
+    const dayName = new Date().toLocaleDateString("fr-FR", {
+      weekday: "long", timeZone: "America/Martinique",
+    });
+    return (
+      <div className="flex flex-col items-center justify-center py-8 gap-3 text-center">
+        <div className="w-10 h-10 rounded-xl bg-[#1a1a1a] flex items-center justify-center">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
+            <circle cx="12" cy="12" r="9" stroke="#52525b" strokeWidth="1.7"/>
+            <path d="M9 9l6 6M15 9l-6 6" stroke="#52525b" strokeWidth="1.7" strokeLinecap="round"/>
+          </svg>
+        </div>
+        <div>
+          <p className="text-sm font-semibold text-zinc-400 capitalize">{dayName}</p>
+          <p className="text-xs text-zinc-600 mt-0.5">SAV fermé</p>
+        </div>
+      </div>
+    );
+  }
+
+  // Group RDVs by hour bucket
   const byHour: Record<number, TodayRdv[]> = {};
   for (const rdv of rdvs) {
     const h = rdvHour(rdv.dateHeure);
@@ -256,62 +337,26 @@ function TimeGrid({ rdvs }: { rdvs: TodayRdv[] }) {
   }
 
   return (
-    <div className="space-y-0.5">
-      {GRID_HOURS.map((h) => {
-        const slot = byHour[h] ?? [];
-        const timeLabel = `${String(h).padStart(2, "0")}:00`;
+    <div className="space-y-3">
+      {/* Morning */}
+      <div>
+        <p className="text-[10px] font-semibold text-zinc-600 uppercase tracking-wider mb-2">Matin</p>
+        <div className="grid grid-cols-2 gap-2">
+          {hours.morning.map((h) => (
+            <SlotBox key={h} hour={h} rdvs={byHour[h] ?? []} />
+          ))}
+        </div>
+      </div>
 
-        return (
-          <div key={h}>
-            {slot.length === 0 ? (
-              /* Empty slot */
-              <div className="flex items-center gap-3 py-1.5 group">
-                <span className="text-[11px] font-mono text-zinc-700 w-10 shrink-0 tabular-nums">
-                  {timeLabel}
-                </span>
-                <div className="flex-1 h-6 border border-dashed border-[#1e1e1e] rounded-md group-hover:border-[#2a2a2a] transition-colors" />
-              </div>
-            ) : (
-              /* Filled slot(s) */
-              slot.map((rdv) => {
-                const color = RDV_COLOR[rdv.type] ?? "#6b7280";
-                return (
-                  <div key={rdv.id} className="flex items-stretch gap-3 py-1">
-                    <span className="text-[11px] font-mono text-zinc-400 w-10 shrink-0 tabular-nums pt-1.5">
-                      {formatTime(rdv.dateHeure)}
-                    </span>
-                    <div
-                      className="flex-1 rounded-lg px-3 py-2 flex items-center justify-between gap-2 min-w-0"
-                      style={{
-                        backgroundColor: `${color}12`,
-                        borderLeft: `2px solid ${color}`,
-                      }}
-                    >
-                      <div className="min-w-0">
-                        <p className="text-xs font-semibold text-zinc-200 truncate">
-                          {rdv.client.prenom} {rdv.client.nom}
-                        </p>
-                        {rdv.client.telephone && (
-                          <p className="text-[10px] text-zinc-600">{rdv.client.telephone}</p>
-                        )}
-                        {rdv.notes && (
-                          <p className="text-[10px] text-zinc-600 truncate">{rdv.notes}</p>
-                        )}
-                      </div>
-                      <span
-                        className="text-[10px] font-semibold px-1.5 py-0.5 rounded-full shrink-0"
-                        style={{ color, backgroundColor: `${color}20` }}
-                      >
-                        {RDV_TYPE_LABELS[rdv.type] ?? rdv.type}
-                      </span>
-                    </div>
-                  </div>
-                );
-              })
-            )}
-          </div>
-        );
-      })}
+      {/* Afternoon */}
+      <div className="border-t border-[#1a1a1a] pt-3">
+        <p className="text-[10px] font-semibold text-zinc-600 uppercase tracking-wider mb-2">Après-midi</p>
+        <div className="grid grid-cols-2 gap-2">
+          {hours.afternoon.map((h) => (
+            <SlotBox key={h} hour={h} rdvs={byHour[h] ?? []} />
+          ))}
+        </div>
+      </div>
     </div>
   );
 }
@@ -368,6 +413,18 @@ export default function DashboardClient({ userName }: { userName: string }) {
     .filter((s) => s.statut !== "LIVRE")
     .reduce((a, b) => a + b._count, 0) ?? 0;
   const pretTickets = stats?.ticketsByStatus.find((s) => s.statut === "PRET")?._count ?? 0;
+
+  const dow        = mtnDayOfWeek();
+  const bizHours   = getBusinessHours(dow);
+  const totalSlots = bizHours ? bizHours.morning.length + bizHours.afternoon.length : 0;
+  const byHourCount: Record<number, number> = {};
+  for (const rdv of stats?.todayRdvs ?? []) {
+    const h = rdvHour(rdv.dateHeure);
+    byHourCount[h] = (byHourCount[h] ?? 0) + 1;
+  }
+  const bookedSlots = bizHours
+    ? [...bizHours.morning, ...bizHours.afternoon].filter((h) => byHourCount[h] > 0).length
+    : 0;
 
   return (
     <div className="-mx-4 -mt-4 sm:-mx-6 sm:-mt-6 md:-mx-8 md:-mt-8 px-4 pt-6 pb-10 sm:px-6 sm:pt-6 sm:pb-10 md:px-8 md:pt-8 md:pb-10 min-h-screen bg-[#0a0a0a] animate-fadeIn">
@@ -547,26 +604,24 @@ export default function DashboardClient({ userName }: { userName: string }) {
             {/* Rendez-vous du jour — time grid */}
             <div className="bg-[#111111] border border-[#1f1f1f] rounded-xl overflow-hidden flex flex-col">
               <div className="flex items-center justify-between px-4 py-3.5 border-b border-[#1a1a1a]">
-                <h2 className="text-sm font-semibold text-white">Rendez-vous du jour</h2>
+                <div className="flex items-center gap-2">
+                  <h2 className="text-sm font-semibold text-white">Rendez-vous du jour</h2>
+                  {totalSlots > 0 && (
+                    <span
+                      className="text-[10px] font-bold px-1.5 py-0.5 rounded-md"
+                      style={{ backgroundColor: "#F4792018", color: "#F47920" }}
+                    >
+                      {bookedSlots} / {totalSlots} CRÉNEAUX
+                    </span>
+                  )}
+                </div>
                 <Link href="/admin/planning" className="text-[11px] font-semibold text-[#F47920] hover:opacity-80 transition-opacity">
                   Planning →
                 </Link>
               </div>
 
               <div className="flex-1 px-4 py-3 overflow-y-auto" style={{ maxHeight: 420 }}>
-                {(!stats?.todayRdvs || stats.todayRdvs.length === 0) ? (
-                  <div className="flex flex-col items-center justify-center gap-3 py-8 text-center">
-                    <div className="w-9 h-9 rounded-xl flex items-center justify-center bg-[#1a1a1a]">
-                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
-                        <rect x="4" y="5.5" width="16" height="14.5" rx="2.2" stroke="#3B82F6" strokeWidth="1.7"/>
-                        <path d="M4 10h16M8.5 3.5v4M15.5 3.5v4" stroke="#3B82F6" strokeWidth="1.7" strokeLinecap="round"/>
-                      </svg>
-                    </div>
-                    <p className="text-sm text-zinc-700">Aucun rendez-vous aujourd&apos;hui</p>
-                  </div>
-                ) : (
-                  <TimeGrid rdvs={stats.todayRdvs} />
-                )}
+                <TimeGrid rdvs={stats?.todayRdvs ?? []} dow={dow} />
               </div>
 
               {/* "+ Planifier un RDV" always visible at bottom */}
