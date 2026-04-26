@@ -116,7 +116,7 @@ function Step1({
   const fileRef = useRef<HTMLInputElement>(null);
   const [photoLoading, setPhotoLoading] = useState(false);
   const [marqueSelect, setMarqueSelect] = useState(
-    ["Bugnot GTS", "Honda", "Husqvarna", "KIVA", "OREC", "RAPID", "STIHL", "VIKING"].includes(data.marque)
+    ["STIHL", "OREC", "KIVA", "GTS", "BUGNOT", "RAPID", "VIKING"].includes(data.marque)
       ? data.marque
       : data.marque
       ? "Autre"
@@ -172,7 +172,7 @@ function Step1({
             style={{ ...inputStyle, ...focusOrange }}
           >
             <option value="">Sélectionner…</option>
-            {["Bugnot GTS", "Honda", "Husqvarna", "KIVA", "OREC", "RAPID", "STIHL", "VIKING"].map((b) => (
+            {["STIHL", "OREC", "KIVA", "GTS", "BUGNOT", "RAPID", "VIKING"].map((b) => (
               <option key={b} value={b}>{b}</option>
             ))}
             <option value="Autre">Autre</option>
