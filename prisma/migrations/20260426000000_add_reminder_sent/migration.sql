@@ -1,0 +1,1 @@
+ALTER TABLE "Ticket" ADD COLUMN "reminderSent" BOOLEAN NOT NULL DEFAULT false;

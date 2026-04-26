@@ -173,6 +173,39 @@ export async function sendStatusUpdate(
   });
 }
 
+export async function sendPickupReminder(
+  email: string,
+  prenom: string,
+  ticket: { numero: string; marque: string; modele: string; materiel: string }
+) {
+  const content = `
+    <h2>Bonjour ${prenom},</h2>
+    <p>Votre machine est prête à être récupérée au SAV Les Hauts de Californie !</p>
+    <div class="info-box">
+      <p><strong>Ticket :</strong> ${ticket.numero}</p>
+      <p><strong>Matériel :</strong> ${ticket.marque} ${ticket.modele} (${ticket.materiel})</p>
+    </div>
+    <div class="info-box">
+      <p><strong>Adresse :</strong> Les Hauts de Californie, Martinique</p>
+      <p><strong>Horaires d'ouverture :</strong></p>
+      <p>Lun – Jeu : 7h–12h et 13h–16h</p>
+      <p>Vendredi : 7h–12h et 13h–15h</p>
+    </div>
+    <p>Merci de récupérer votre matériel dès que possible.</p>
+    <p>En cas de questions, n'hésitez pas à nous contacter.</p>
+    <div style="text-align: center; margin: 24px 0;">
+      <a href="${APP_URL}/client/dashboard" class="btn">Voir mon ticket</a>
+    </div>
+  `;
+
+  await transporter.sendMail({
+    from: FROM,
+    to: email,
+    subject: "Votre machine est prête à être récupérée",
+    html: baseTemplate(content),
+  });
+}
+
 export async function sendTicketWithRdvConfirmation(
   email: string,
   prenom: string,

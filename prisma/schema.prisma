@@ -75,6 +75,7 @@ model Ticket {
   notesPubliques  String?
   notesPrivees    String?
   viewedByAdmin   Boolean      @default(false)
+  reminderSent    Boolean      @default(false)
   technicienId    String?
   technicien     Technician?  @relation(fields: [technicienId], references: [id])
   createdAt      DateTime     @default(now())
