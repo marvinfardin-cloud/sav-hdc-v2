@@ -795,6 +795,22 @@ export default function StatsPage() {
         </div>
       )}
 
+      {/* ── Techniciens tab — error/empty fallback ── */}
+      {activeCategory === "techniciens" && !techLoading && !techData && (
+        <div className="flex flex-col items-center justify-center py-24 gap-3 text-zinc-600">
+          <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z" />
+          </svg>
+          <p className="text-sm">Impossible de charger les données techniciens.</p>
+          <button
+            onClick={loadTech}
+            className="px-3 py-1.5 bg-[#111111] border border-[#1f1f1f] text-zinc-400 rounded-lg text-sm hover:border-[#F47920]/50 hover:text-[#F47920] transition-colors"
+          >
+            Réessayer
+          </button>
+        </div>
+      )}
+
       {/* ── Techniciens tab ── */}
       {activeCategory === "techniciens" && !techLoading && techData && (
         <div className="space-y-4">
