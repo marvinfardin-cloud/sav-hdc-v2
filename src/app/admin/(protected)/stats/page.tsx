@@ -3,10 +3,41 @@
 import { useEffect, useState, useCallback } from "react";
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
-  LabelList, AreaChart, Area, LineChart, Line, Cell,
+  LabelList, AreaChart, Area, LineChart, Line, Cell, Legend,
 } from "recharts";
 
 // ── Types ─────────────────────────────────────────────────────────────────────
+
+interface TechInfo {
+  id: string;
+  prenom: string;
+  nom: string;
+  initiales: string;
+  couleur: string;
+}
+
+interface TechRankRow extends TechInfo {
+  tickets: number;
+  repares: number;
+  taux: number;
+  delaiMoyen: number;
+  lastActivity: string | null;
+}
+
+interface TechKpis {
+  totalTickets: number;
+  totalRepares: number;
+  tauxGlobal: number;
+  delaiGlobal: number;
+}
+
+interface TechData {
+  technicians: TechInfo[];
+  kpis: TechKpis;
+  ranking: TechRankRow[];
+  weeklyBars: Record<string, string | number | boolean>[];
+  monthlyEvolution: Record<string, string | number>[];
+}
 
 interface Kpis {
   totalEntrees: number;
@@ -80,14 +111,15 @@ const getBrandColor = (name: string) =>
   BRAND_COLORS[name.toUpperCase()] ?? "#6b7280";
 
 const CATEGORIES = [
-  { value: "all",      label: "Toutes les stats" },
-  { value: "entrees",  label: "Machines entrées" },
-  { value: "reparees", label: "Machines réparées" },
-  { value: "sorties",  label: "Machines sorties" },
-  { value: "taux",     label: "Taux de réparation" },
-  { value: "attente",  label: "Attente pièces" },
-  { value: "rdv",      label: "RDV pris" },
-  { value: "marque",   label: "Par marque" },
+  { value: "all",          label: "Toutes les stats" },
+  { value: "entrees",      label: "Machines entrées" },
+  { value: "reparees",     label: "Machines réparées" },
+  { value: "sorties",      label: "Machines sorties" },
+  { value: "taux",         label: "Taux de réparation" },
+  { value: "attente",      label: "Attente pièces" },
+  { value: "rdv",          label: "RDV pris" },
+  { value: "marque",       label: "Par marque" },
+  { value: "techniciens",  label: "Techniciens" },
 ] as const;
 
 type CatValue = typeof CATEGORIES[number]["value"];
@@ -100,14 +132,15 @@ interface CatConfig {
 }
 
 const CAT_CONFIG: Record<CatValue, CatConfig> = {
-  all:      { kpis: ["all"], charts: ["parMois", "parStatut", "parMarque", "evolution"], ticketFilter: () => true,                                      showTickets: true  },
-  entrees:  { kpis: ["totalEntrees"],                                                    charts: ["parMois", "evolution"],                               ticketFilter: () => true,                                                   showTickets: true  },
-  reparees: { kpis: ["totalRepares", "tauxReparation", "delaiMoyen"],                   charts: ["parMois", "parStatut"],                               ticketFilter: (t) => t.statut === "LIVRE",                                  showTickets: true  },
-  sorties:  { kpis: ["machinesSorties"],                                                 charts: ["parMois"],                                            ticketFilter: (t) => t.statut === "LIVRE" && t.dateLivraison !== null,     showTickets: true  },
-  taux:     { kpis: ["totalEntrees", "totalRepares", "tauxReparation"],                 charts: ["parMois", "parStatut"],                               ticketFilter: () => true,                                                   showTickets: false },
-  attente:  { kpis: ["enAttentePieces"],                                                 charts: [],                                                     ticketFilter: (t) => t.statut === "ATTENTE_PIECES",                        showTickets: true  },
-  rdv:      { kpis: ["rdvPeriode"],                                                      charts: [],                                                     ticketFilter: () => false,                                                  showTickets: false },
-  marque:   { kpis: ["totalEntrees"],                                                    charts: ["parMarque"],                                          ticketFilter: () => true,                                                   showTickets: true  },
+  all:         { kpis: ["all"], charts: ["parMois", "parStatut", "parMarque", "evolution"], ticketFilter: () => true,                                      showTickets: true  },
+  entrees:     { kpis: ["totalEntrees"],                                                    charts: ["parMois", "evolution"],                               ticketFilter: () => true,                                                   showTickets: true  },
+  reparees:    { kpis: ["totalRepares", "tauxReparation", "delaiMoyen"],                   charts: ["parMois", "parStatut"],                               ticketFilter: (t) => t.statut === "LIVRE",                                  showTickets: true  },
+  sorties:     { kpis: ["machinesSorties"],                                                 charts: ["parMois"],                                            ticketFilter: (t) => t.statut === "LIVRE" && t.dateLivraison !== null,     showTickets: true  },
+  taux:        { kpis: ["totalEntrees", "totalRepares", "tauxReparation"],                 charts: ["parMois", "parStatut"],                               ticketFilter: () => true,                                                   showTickets: false },
+  attente:     { kpis: ["enAttentePieces"],                                                 charts: [],                                                     ticketFilter: (t) => t.statut === "ATTENTE_PIECES",                        showTickets: true  },
+  rdv:         { kpis: ["rdvPeriode"],                                                      charts: [],                                                     ticketFilter: () => false,                                                  showTickets: false },
+  marque:      { kpis: ["totalEntrees"],                                                    charts: ["parMarque"],                                          ticketFilter: () => true,                                                   showTickets: true  },
+  techniciens: { kpis: [],                                                                  charts: [],                                                     ticketFilter: () => false,                                                  showTickets: false },
 };
 
 // ── Date helpers ──────────────────────────────────────────────────────────────
@@ -120,13 +153,20 @@ function mondayOfWeek() {
   d.setDate(d.getDate() - day + 1);
   return d.toLocaleDateString("en-CA");
 }
-function firstOfMonth() { return today().slice(0, 7) + "-01"; }
-function firstOfYear()  { return today().slice(0, 4) + "-01-01"; }
+function firstOfMonth()   { return today().slice(0, 7) + "-01"; }
+function firstOfQuarter() {
+  const t = today();
+  const month = parseInt(t.slice(5, 7));
+  const qStart = Math.floor((month - 1) / 3) * 3 + 1;
+  return t.slice(0, 5) + String(qStart).padStart(2, "0") + "-01";
+}
+function firstOfYear()    { return today().slice(0, 4) + "-01-01"; }
 
 const PRESETS = [
-  { label: "Cette semaine", from: mondayOfWeek, to: today },
-  { label: "Ce mois",       from: firstOfMonth, to: today },
-  { label: "Cette année",   from: firstOfYear,  to: today },
+  { label: "Cette semaine",  from: mondayOfWeek,   to: today },
+  { label: "Ce mois",        from: firstOfMonth,   to: today },
+  { label: "Ce trimestre",   from: firstOfQuarter, to: today },
+  { label: "Cette année",    from: firstOfYear,    to: today },
 ] as const;
 
 // ── Trend helper ──────────────────────────────────────────────────────────────
@@ -502,6 +542,63 @@ const darkTooltip = {
   cursor: { fill: "rgba(255,255,255,0.03)" },
 };
 
+// ── Tech ranking table ────────────────────────────────────────────────────────
+
+function TechRankingTable({ ranking }: { ranking: TechRankRow[] }) {
+  if (ranking.length === 0) return (
+    <p className="text-sm text-zinc-600 text-center py-8">Aucune donnée</p>
+  );
+  return (
+    <div className="overflow-x-auto">
+      <table className="w-full text-sm">
+        <thead>
+          <tr className="border-b border-[#1f1f1f]">
+            {["Technicien", "Tickets", "Réparés", "Taux", "Délai moy.", "Dernière activité"].map((h) => (
+              <th key={h} className="text-left text-[11px] font-semibold text-zinc-600 pb-2.5 pr-4 whitespace-nowrap">{h}</th>
+            ))}
+          </tr>
+        </thead>
+        <tbody className="divide-y divide-[#161616]">
+          {ranking.map((r) => (
+            <tr key={r.id} className="hover:bg-white/[0.02] transition-colors">
+              <td className="py-2.5 pr-4 whitespace-nowrap">
+                <div className="flex items-center gap-2">
+                  <span
+                    className="w-6 h-6 rounded-full flex items-center justify-center text-white text-[10px] font-bold shrink-0"
+                    style={{ backgroundColor: r.couleur }}
+                  >
+                    {r.initiales}
+                  </span>
+                  <span className="text-zinc-300 text-xs">{r.prenom}</span>
+                </div>
+              </td>
+              <td className="py-2.5 pr-4 text-zinc-400 text-xs">{r.tickets}</td>
+              <td className="py-2.5 pr-4 text-zinc-300 font-semibold text-xs">{r.repares}</td>
+              <td className="py-2.5 pr-4 text-xs">
+                <span
+                  className="px-2 py-0.5 rounded-full font-semibold"
+                  style={{
+                    backgroundColor: r.taux >= 70 ? "#10B98122" : r.taux >= 40 ? "#F4792022" : "#ef444422",
+                    color:           r.taux >= 70 ? "#10B981"   : r.taux >= 40 ? "#F47920"   : "#ef4444",
+                  }}
+                >
+                  {r.taux}%
+                </span>
+              </td>
+              <td className="py-2.5 pr-4 text-zinc-600 text-xs">{r.delaiMoyen > 0 ? `${r.delaiMoyen}j` : "—"}</td>
+              <td className="py-2.5 pr-4 text-zinc-600 text-xs whitespace-nowrap">
+                {r.lastActivity ? new Date(r.lastActivity).toLocaleDateString("fr-FR") : "—"}
+              </td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  );
+}
+
+const TECH_BRANDS = ["STIHL", "OREC", "KIVA", "GTS", "BUGNOT", "RAPID", "VIKING"];
+
 // ── Main page ─────────────────────────────────────────────────────────────────
 
 export default function StatsPage() {
@@ -513,6 +610,12 @@ export default function StatsPage() {
   const [activeCategory, setActiveCategory] = useState<CatValue>("all");
   const [exporting, setExporting]       = useState<"excel" | "pdf" | null>(null);
 
+  // Techniciens tab state
+  const [selectedTech,  setSelectedTech]  = useState<string | null>(null);
+  const [selectedBrand, setSelectedBrand] = useState<string | null>(null);
+  const [techData,      setTechData]      = useState<TechData | null>(null);
+  const [techLoading,   setTechLoading]   = useState(false);
+
   const load = useCallback(async () => {
     setLoading(true);
     try {
@@ -523,7 +626,23 @@ export default function StatsPage() {
     }
   }, [from, to]);
 
+  const loadTech = useCallback(async () => {
+    setTechLoading(true);
+    try {
+      const params = new URLSearchParams({ from, to });
+      if (selectedTech)  params.set("techId", selectedTech);
+      if (selectedBrand) params.set("marque", selectedBrand);
+      const res = await fetch(`/api/admin/stats/techniciens?${params}`);
+      if (res.ok) setTechData(await res.json());
+    } finally {
+      setTechLoading(false);
+    }
+  }, [from, to, selectedTech, selectedBrand]);
+
   useEffect(() => { load(); }, [load]);
+  useEffect(() => {
+    if (activeCategory === "techniciens") loadTech();
+  }, [activeCategory, loadTech]);
 
   function applyPreset(label: string, fromFn: () => string, toFn: () => string) {
     setActivePreset(label);
@@ -670,13 +789,175 @@ export default function StatsPage() {
       </div>
 
       {/* ── Loading ── */}
-      {loading && (
+      {(activeCategory === "techniciens" ? techLoading : loading) && (
         <div className="flex items-center justify-center py-24 text-zinc-700 gap-3">
           <Spinner /> <span className="text-sm">Chargement…</span>
         </div>
       )}
 
-      {!loading && data && (
+      {/* ── Techniciens tab ── */}
+      {activeCategory === "techniciens" && !techLoading && techData && (
+        <div className="space-y-4">
+
+          {/* Tech + brand selectors */}
+          <div className="bg-[#111111] border border-[#1f1f1f] rounded-xl px-4 py-3">
+            <div className="flex flex-wrap items-center gap-3">
+              <div className="flex gap-1 flex-wrap">
+                <button
+                  onClick={() => setSelectedTech(null)}
+                  className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${
+                    selectedTech === null ? "text-white" : "text-zinc-500 hover:text-zinc-300 hover:bg-white/5"
+                  }`}
+                  style={selectedTech === null ? { backgroundColor: "#F47920" } : {}}
+                >
+                  Tous
+                </button>
+                {techData.technicians.map((tech) => (
+                  <button
+                    key={tech.id}
+                    onClick={() => setSelectedTech(tech.id === selectedTech ? null : tech.id)}
+                    className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${
+                      selectedTech === tech.id ? "text-white" : "text-zinc-500 hover:text-zinc-300 hover:bg-white/5"
+                    }`}
+                    style={selectedTech === tech.id ? { backgroundColor: tech.couleur } : {}}
+                  >
+                    {tech.initiales} — {tech.prenom}
+                  </button>
+                ))}
+              </div>
+              <div className="flex gap-1 flex-wrap ml-auto">
+                <button
+                  onClick={() => setSelectedBrand(null)}
+                  className={`px-2.5 py-1 rounded-lg text-xs font-medium transition-colors ${
+                    selectedBrand === null ? "text-white" : "text-zinc-600 hover:text-zinc-400 hover:bg-white/5"
+                  }`}
+                  style={selectedBrand === null ? { backgroundColor: "#333" } : {}}
+                >
+                  Toutes marques
+                </button>
+                {TECH_BRANDS.map((m) => (
+                  <button
+                    key={m}
+                    onClick={() => setSelectedBrand(m === selectedBrand ? null : m)}
+                    className={`px-2.5 py-1 rounded-lg text-xs font-medium transition-colors ${
+                      selectedBrand === m ? "text-white" : "text-zinc-600 hover:text-zinc-400 hover:bg-white/5"
+                    }`}
+                    style={selectedBrand === m ? { backgroundColor: getBrandColor(m) } : {}}
+                  >
+                    {m}
+                  </button>
+                ))}
+              </div>
+            </div>
+          </div>
+
+          {/* KPI cards */}
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+            <KpiCard label="Tickets traités"    value={techData.kpis.totalTickets} />
+            <KpiCard label="Machines réparées"  value={techData.kpis.totalRepares} />
+            <KpiCard label="Taux de réparation" value={techData.kpis.tauxGlobal}  unit="%" />
+            <KpiCard label="Délai moyen"         value={techData.kpis.delaiGlobal} unit="j" sub="entre dépôt et livraison" />
+          </div>
+
+          {/* Weekly bars + ranking */}
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+            <div className="lg:col-span-2">
+              <Section title="Machines réparées par semaine" subtitle="Semaines de la période sélectionnée">
+                {techData.weeklyBars.length === 0 ? (
+                  <p className="text-sm text-zinc-600 text-center py-8">Aucune donnée sur cette période</p>
+                ) : (
+                  <ResponsiveContainer width="100%" height={240}>
+                    <BarChart
+                      data={techData.weeklyBars}
+                      margin={{ top: 16, right: 4, left: -28, bottom: 0 }}
+                      barCategoryGap="20%"
+                      barGap={2}
+                    >
+                      <CartesianGrid strokeDasharray="3 3" stroke="#1a1a1a" vertical={false} />
+                      <XAxis dataKey="week" tick={{ fontSize: 10, fill: "#a1a1aa" }} axisLine={false} tickLine={false} />
+                      <YAxis tick={{ fontSize: 10, fill: "#71717a" }} axisLine={false} tickLine={false} allowDecimals={false} />
+                      <Tooltip {...darkTooltip} />
+                      <Legend
+                        iconType="circle"
+                        iconSize={8}
+                        wrapperStyle={{ fontSize: 11, color: "#71717a", paddingTop: 8 }}
+                      />
+                      {techData.technicians.map((tech) => (
+                        <Bar
+                          key={tech.id}
+                          dataKey={tech.initiales}
+                          name={tech.prenom}
+                          radius={[3, 3, 0, 0]}
+                          isAnimationActive
+                          animationDuration={600}
+                        >
+                          {techData.weeklyBars.map((entry, i) => (
+                            <Cell
+                              key={`cell-${i}`}
+                              fill={entry.isCurrent ? tech.couleur : `${tech.couleur}55`}
+                            />
+                          ))}
+                        </Bar>
+                      ))}
+                    </BarChart>
+                  </ResponsiveContainer>
+                )}
+              </Section>
+            </div>
+
+            <Section title="Classement" subtitle="Sur la période">
+              <TechRankingTable ranking={techData.ranking} />
+            </Section>
+          </div>
+
+          {/* Monthly evolution */}
+          <Section title="Évolution mensuelle" subtitle="Machines réparées · 12 derniers mois">
+            <ResponsiveContainer width="100%" height={220}>
+              <LineChart
+                data={techData.monthlyEvolution}
+                margin={{ top: 16, right: 4, left: -28, bottom: 0 }}
+              >
+                <CartesianGrid strokeDasharray="3 3" stroke="#1a1a1a" vertical={false} />
+                <XAxis
+                  dataKey="month"
+                  tick={{ fontSize: 10, fill: "#a1a1aa" }}
+                  axisLine={false}
+                  tickLine={false}
+                  interval={1}
+                />
+                <YAxis
+                  tick={{ fontSize: 10, fill: "#71717a" }}
+                  axisLine={false}
+                  tickLine={false}
+                  allowDecimals={false}
+                />
+                <Tooltip {...darkTooltip} />
+                <Legend
+                  iconType="circle"
+                  iconSize={8}
+                  wrapperStyle={{ fontSize: 11, color: "#71717a", paddingTop: 8 }}
+                />
+                {techData.technicians.map((tech) => (
+                  <Line
+                    key={tech.id}
+                    type="monotone"
+                    dataKey={tech.initiales}
+                    name={tech.prenom}
+                    stroke={tech.couleur}
+                    strokeWidth={2}
+                    dot={{ r: 3, fill: tech.couleur, stroke: "#0a0a0a", strokeWidth: 2 }}
+                    activeDot={{ r: 5, fill: tech.couleur, stroke: "#0a0a0a", strokeWidth: 2 }}
+                    isAnimationActive
+                    animationDuration={800}
+                  />
+                ))}
+              </LineChart>
+            </ResponsiveContainer>
+          </Section>
+        </div>
+      )}
+
+      {activeCategory !== "techniciens" && !loading && data && (
         <div className="space-y-4">
 
           {/* ── KPI cards grid ── */}

@@ -40,7 +40,7 @@ async function main() {
     data: { prenom: "Jordy",    nom: "Ouly",     initiales: "JO", couleur: "#10B981" },
   });
   const tech3 = await prisma.technician.create({
-    data: { prenom: "Jean-Louis", nom: "Boutrin", initiales: "JB", couleur: "#8B5CF6" },
+    data: { prenom: "Jean-Louis", nom: "Boutant", initiales: "JB", couleur: "#8B5CF6" },
   });
 
   console.log("✅ Techniciens créés");
