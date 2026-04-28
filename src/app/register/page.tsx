@@ -14,6 +14,7 @@ export default function RegisterPage() {
     password: "",
     confirmPassword: "",
   });
+  const [rgpd, setRgpd] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
@@ -32,6 +33,11 @@ export default function RegisterPage() {
 
     if (form.password.length < 8) {
       setError("Le mot de passe doit contenir au moins 8 caractères");
+      return;
+    }
+
+    if (!rgpd) {
+      setError("Vous devez accepter la politique de confidentialité pour continuer");
       return;
     }
 
@@ -164,6 +170,28 @@ export default function RegisterPage() {
                 className="w-full px-3 py-3 border border-gray-300 rounded-lg text-base focus:outline-none focus:ring-2 focus:ring-navy-500 focus:border-navy-500 transition-colors min-h-[44px]"
               />
             </div>
+            <div className="flex items-start gap-3 pt-1">
+              <input
+                type="checkbox"
+                id="rgpd"
+                checked={rgpd}
+                onChange={(e) => setRgpd(e.target.checked)}
+                className="mt-0.5 w-4 h-4 shrink-0 accent-[#F47920] cursor-pointer"
+              />
+              <label htmlFor="rgpd" className="text-sm text-gray-600 leading-snug cursor-pointer">
+                J&apos;accepte la{" "}
+                <a
+                  href="/politique-confidentialite"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="font-medium underline hover:opacity-80"
+                  style={{ color: "#F47920" }}
+                >
+                  politique de confidentialité
+                </a>{" "}
+                et les conditions d&apos;utilisation de Quavio.
+              </label>
+            </div>
             <button
               type="submit"
               disabled={loading}
@@ -193,6 +221,10 @@ export default function RegisterPage() {
 
         <p className="text-center text-white/60 text-xs mt-6">
           Accès client — Espace de suivi SAV
+          <span className="mx-2">·</span>
+          <a href="/politique-confidentialite" target="_blank" rel="noopener noreferrer" className="underline hover:text-white/80 transition-colors">
+            Politique de confidentialité
+          </a>
         </p>
       </div>
     </div>

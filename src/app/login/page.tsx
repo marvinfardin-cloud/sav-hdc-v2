@@ -118,6 +118,10 @@ export default function LoginPage() {
 
         <p className="text-center text-white/60 text-xs mt-6">
           Accès client — Espace de suivi SAV
+          <span className="mx-2">·</span>
+          <a href="/politique-confidentialite" target="_blank" rel="noopener noreferrer" className="underline hover:text-white/80 transition-colors">
+            Politique de confidentialité
+          </a>
         </p>
       </div>
     </div>
