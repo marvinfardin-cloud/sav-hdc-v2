@@ -56,3 +56,32 @@ export async function PUT(
     return NextResponse.json({ error: "Erreur serveur" }, { status: 500, headers: noCacheHeaders() });
   }
 }
+
+export async function PATCH(
+  request: NextRequest,
+  { params }: { params: { id: string } }
+) {
+  const session = await getAdminSession();
+  if (!session) {
+    return NextResponse.json({ error: "Non autorisé" }, { status: 401, headers: noCacheHeaders() });
+  }
+
+  try {
+    const { nom, email, telephone } = await request.json();
+
+    const data: Record<string, string | null> = {};
+    if (nom !== undefined)       data.nom       = nom.trim();
+    if (email !== undefined)     data.email     = email.toLowerCase().trim();
+    if (telephone !== undefined) data.telephone = telephone?.trim() || null;
+
+    const client = await prisma.client.update({
+      where: { id: params.id },
+      data,
+    });
+
+    return NextResponse.json(client, { headers: noCacheHeaders() });
+  } catch (error) {
+    console.error("Update client error:", error);
+    return NextResponse.json({ error: "Erreur serveur" }, { status: 500, headers: noCacheHeaders() });
+  }
+}

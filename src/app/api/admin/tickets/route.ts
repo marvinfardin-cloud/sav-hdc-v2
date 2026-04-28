@@ -11,14 +11,17 @@ export async function GET(request: NextRequest) {
   }
 
   const { searchParams } = request.nextUrl;
-  const status = searchParams.get("status");
-  const search = searchParams.get("search");
+  const status     = searchParams.get("status");
+  const search     = searchParams.get("search");
+  const showClosed = searchParams.get("showClosed") === "true";
 
   const where: Record<string, unknown> = {};
   if (status === "active") {
-    where.statut = { notIn: ["LIVRE"] };
+    where.statut = { notIn: ["LIVRE", "CLOTURE"] };
   } else if (status) {
     where.statut = status as Statut;
+  } else if (!showClosed) {
+    where.statut = { not: "CLOTURE" as Statut };
   }
   if (search) {
     where.OR = [

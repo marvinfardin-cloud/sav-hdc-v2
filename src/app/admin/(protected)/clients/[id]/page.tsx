@@ -5,6 +5,7 @@ import { useParams } from "next/navigation";
 import Link from "next/link";
 import { StatusBadge } from "@/components/ui/Badge";
 import { formatDate, formatDateTime, RDV_TYPE_LABELS, RDV_TYPE_COLORS } from "@/lib/utils";
+import { Input } from "@/components/ui/Input";
 
 interface ClientDetail {
   id: string;
@@ -34,15 +35,24 @@ interface ClientDetail {
 
 export default function ClientDetailPage() {
   const params = useParams();
-  const [client, setClient] = useState<ClientDetail | null>(null);
-  const [loading, setLoading] = useState(true);
+  const [client, setClient]     = useState<ClientDetail | null>(null);
+  const [loading, setLoading]   = useState(true);
+  const [showEdit, setShowEdit] = useState(false);
+  const [toast, setToast]       = useState("");
 
-  useEffect(() => {
+  const fetchClient = () => {
     fetch(`/api/admin/clients/${params.id}`)
       .then((r) => r.json())
       .then(setClient)
       .finally(() => setLoading(false));
-  }, [params.id]);
+  };
+
+  useEffect(() => { fetchClient(); }, [params.id]);
+
+  const showToast = (msg: string) => {
+    setToast(msg);
+    setTimeout(() => setToast(""), 3000);
+  };
 
   if (loading) {
     return (
@@ -61,6 +71,16 @@ export default function ClientDetailPage() {
 
   return (
     <div className="space-y-6 animate-fadeIn max-w-5xl">
+      {/* Toast */}
+      {toast && (
+        <div className="fixed top-4 right-4 z-50 bg-green-600 text-white px-4 py-2.5 rounded-lg shadow-lg text-sm font-medium flex items-center gap-2 animate-fadeIn">
+          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+          </svg>
+          {toast}
+        </div>
+      )}
+
       <div>
         <Link href="/admin/clients" className="text-sm text-gray-500 hover:text-gray-700 flex items-center gap-1 mb-3">
           <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -68,16 +88,27 @@ export default function ClientDetailPage() {
           </svg>
           Clients
         </Link>
-        <div className="flex items-center gap-4">
-          <div className="w-14 h-14 bg-navy-100 rounded-full flex items-center justify-center">
-            <span className="text-navy-700 font-bold text-lg">
-              {client.prenom.charAt(0)}{client.nom.charAt(0)}
-            </span>
+        <div className="flex items-center justify-between gap-4">
+          <div className="flex items-center gap-4">
+            <div className="w-14 h-14 bg-navy-100 rounded-full flex items-center justify-center">
+              <span className="text-navy-700 font-bold text-lg">
+                {client.prenom.charAt(0)}{client.nom.charAt(0)}
+              </span>
+            </div>
+            <div>
+              <h1 className="text-2xl font-bold text-gray-900">{client.prenom} {client.nom}</h1>
+              <p className="text-gray-500 text-sm">Client depuis le {formatDate(client.createdAt)}</p>
+            </div>
           </div>
-          <div>
-            <h1 className="text-2xl font-bold text-gray-900">{client.prenom} {client.nom}</h1>
-            <p className="text-gray-500 text-sm">Client depuis le {formatDate(client.createdAt)}</p>
-          </div>
+          <button
+            onClick={() => setShowEdit(true)}
+            className="flex items-center gap-2 px-3 py-2 text-sm font-medium text-gray-600 bg-white border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors shadow-sm"
+          >
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+            </svg>
+            Modifier
+          </button>
         </div>
       </div>
 
@@ -170,6 +201,122 @@ export default function ClientDetailPage() {
             </div>
           </div>
         </div>
+      </div>
+
+      {showEdit && (
+        <EditClientModal
+          client={client}
+          onClose={() => setShowEdit(false)}
+          onSuccess={(updated) => {
+            setClient((prev) => prev ? { ...prev, ...updated } : prev);
+            setShowEdit(false);
+            showToast("Profil client mis à jour");
+          }}
+        />
+      )}
+    </div>
+  );
+}
+
+function EditClientModal({
+  client,
+  onClose,
+  onSuccess,
+}: {
+  client: ClientDetail;
+  onClose: () => void;
+  onSuccess: (updated: Partial<ClientDetail>) => void;
+}) {
+  const [form, setForm] = useState({
+    nom:       client.nom,
+    email:     client.email,
+    telephone: client.telephone ?? "",
+  });
+  const [loading, setLoading] = useState(false);
+  const [error, setError]     = useState("");
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setError("");
+    setLoading(true);
+    try {
+      const res = await fetch(`/api/admin/clients/${client.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(form),
+      });
+      if (!res.ok) {
+        const d = await res.json();
+        setError(d.error || "Erreur lors de la mise à jour");
+        return;
+      }
+      const updated = await res.json();
+      onSuccess(updated);
+    } catch {
+      setError("Erreur serveur");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <div className="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md">
+        <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100">
+          <h2 className="text-lg font-semibold text-gray-900">Modifier le client</h2>
+          <button onClick={onClose} className="text-gray-400 hover:text-gray-600">
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+            </svg>
+          </button>
+        </div>
+        <form onSubmit={handleSubmit} className="p-6 space-y-4">
+          {error && <div className="p-3 bg-red-50 border border-red-200 rounded-lg text-sm text-red-700">{error}</div>}
+          <Input
+            label="Nom"
+            value={form.nom}
+            onChange={(e) => setForm((f) => ({ ...f, nom: e.target.value }))}
+            required
+          />
+          <Input
+            label="Email"
+            type="email"
+            value={form.email}
+            onChange={(e) => setForm((f) => ({ ...f, email: e.target.value }))}
+            required
+          />
+          <Input
+            label="Téléphone"
+            type="tel"
+            value={form.telephone}
+            onChange={(e) => setForm((f) => ({ ...f, telephone: e.target.value }))}
+            placeholder="+596 696 12 34 56"
+          />
+          <div className="flex gap-3 pt-2">
+            <button
+              type="button"
+              onClick={onClose}
+              disabled={loading}
+              className="flex-1 px-4 py-2.5 border border-gray-300 text-gray-700 text-sm font-medium rounded-lg hover:bg-gray-50 transition-colors disabled:opacity-50"
+            >
+              Annuler
+            </button>
+            <button
+              type="submit"
+              disabled={loading}
+              className="flex-1 px-4 py-2.5 text-white text-sm font-medium rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+              style={{ backgroundColor: "#F47920" }}
+            >
+              {loading && (
+                <svg className="animate-spin w-4 h-4" fill="none" viewBox="0 0 24 24">
+                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"/>
+                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/>
+                </svg>
+              )}
+              Enregistrer
+            </button>
+          </div>
+        </form>
       </div>
     </div>
   );

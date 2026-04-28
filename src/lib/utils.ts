@@ -5,6 +5,7 @@ export const STATUT_LABELS: Record<string, string> = {
   EN_REPARATION: "En réparation",
   PRET: "Prêt",
   LIVRE: "Livré",
+  CLOTURE: "Clôturé",
 };
 
 export const STATUT_COLORS: Record<string, string> = {
@@ -14,6 +15,7 @@ export const STATUT_COLORS: Record<string, string> = {
   EN_REPARATION: "bg-purple-100 text-purple-800",
   PRET: "bg-green-100 text-green-800",
   LIVRE: "bg-gray-100 text-gray-800",
+  CLOTURE: "bg-zinc-100 text-zinc-400",
 };
 
 export const STATUT_ORDER = [
@@ -23,6 +25,7 @@ export const STATUT_ORDER = [
   "EN_REPARATION",
   "PRET",
   "LIVRE",
+  "CLOTURE",
 ];
 
 export const RDV_TYPE_LABELS: Record<string, string> = {

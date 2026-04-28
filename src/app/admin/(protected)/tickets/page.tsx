@@ -30,7 +30,7 @@ interface Ticket {
   _count?: { messages: number };
 }
 
-const STATUTS = ["RECU", "DIAGNOSTIC", "ATTENTE_PIECES", "EN_REPARATION", "PRET", "LIVRE"];
+const STATUTS = ["RECU", "DIAGNOSTIC", "ATTENTE_PIECES", "EN_REPARATION", "PRET", "LIVRE", "CLOTURE"];
 const STATUT_LABELS: Record<string, string> = {
   RECU: "Reçu",
   DIAGNOSTIC: "En diagnostic",
@@ -38,6 +38,7 @@ const STATUT_LABELS: Record<string, string> = {
   EN_REPARATION: "En réparation",
   PRET: "Prêt",
   LIVRE: "Livré",
+  CLOTURE: "Clôturé",
 };
 
 export default function TicketsPage() {
@@ -47,6 +48,7 @@ export default function TicketsPage() {
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState(searchParams.get("status") || "");
+  const [showClosed, setShowClosed] = useState(false);
   const [showCreateModal, setShowCreateModal] = useState(false);
 
   const fetchTickets = useCallback(async () => {
@@ -54,11 +56,12 @@ export default function TicketsPage() {
     const params = new URLSearchParams();
     if (statusFilter) params.set("status", statusFilter);
     if (search) params.set("search", search);
+    if (showClosed) params.set("showClosed", "true");
     const res = await fetch(`/api/admin/tickets?${params}`);
     const data = await res.json();
     setTickets(data);
     setLoading(false);
-  }, [statusFilter, search]);
+  }, [statusFilter, search, showClosed]);
 
   useEffect(() => {
     fetchTickets();
@@ -98,17 +101,27 @@ export default function TicketsPage() {
               className="w-full px-3 py-2.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-navy-500 focus:border-navy-500 min-h-[44px]"
             />
           </div>
-          <div className="flex gap-2">
+          <div className="flex gap-2 flex-wrap">
             <select
               value={statusFilter}
               onChange={(e) => setStatusFilter(e.target.value)}
               className="flex-1 sm:flex-none px-3 py-2.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-navy-500 bg-white min-h-[44px]"
             >
               <option value="">Tous les statuts</option>
-              {STATUTS.map((s) => (
+              {STATUTS.filter((s) => s !== "CLOTURE" || showClosed).map((s) => (
                 <option key={s} value={s}>{STATUT_LABELS[s]}</option>
               ))}
             </select>
+            <button
+              onClick={() => { setShowClosed((v) => !v); if (statusFilter === "CLOTURE") setStatusFilter(""); }}
+              className={`px-3 py-2 text-sm border rounded-lg min-h-[44px] whitespace-nowrap transition-colors ${
+                showClosed
+                  ? "bg-zinc-100 text-zinc-700 border-zinc-300"
+                  : "text-gray-500 hover:text-gray-700 border-gray-300 hover:bg-gray-50"
+              }`}
+            >
+              {showClosed ? "Masquer clôturés" : "Afficher clôturés"}
+            </button>
             {(search || statusFilter) && (
               <button
                 onClick={() => { setSearch(""); setStatusFilter(""); }}
@@ -140,7 +153,11 @@ export default function TicketsPage() {
             <Link
               key={ticket.id}
               href={`/admin/tickets/${ticket.id}`}
-              className="block bg-white rounded-xl border border-gray-100 shadow-sm p-4 hover:shadow-md transition-shadow active:bg-gray-50"
+              className={`block rounded-xl border shadow-sm p-4 hover:shadow-md transition-shadow active:bg-gray-50 ${
+                ticket.statut === "CLOTURE"
+                  ? "bg-zinc-50 border-zinc-100 opacity-60"
+                  : "bg-white border-gray-100"
+              }`}
             >
               <div className="flex items-start justify-between gap-2">
                 <div className="min-w-0 flex-1">
@@ -215,7 +232,14 @@ export default function TicketsPage() {
                 </tr>
               ) : (
                 tickets.map((ticket) => (
-                  <tr key={ticket.id} className="hover:bg-gray-50/50 transition-colors">
+                  <tr
+                    key={ticket.id}
+                    className={`transition-colors ${
+                      ticket.statut === "CLOTURE"
+                        ? "opacity-50 bg-zinc-50/50"
+                        : "hover:bg-gray-50/50"
+                    }`}
+                  >
                     <td className="px-6 py-4">
                       <div className="flex items-center gap-2">
                         <span className="font-mono font-semibold text-navy-700 text-sm">{ticket.numero}</span>
