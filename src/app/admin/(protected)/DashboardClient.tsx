@@ -4,6 +4,7 @@ import { useEffect, useState, useCallback } from "react";
 import Link from "next/link";
 import { formatDate, formatTime, RDV_TYPE_LABELS } from "@/lib/utils";
 import { ResponsiveContainer, LineChart, Line } from "recharts";
+import { CreateTicketModal, type Client } from "@/components/admin/CreateTicketModal";
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -358,10 +359,19 @@ function TimeGrid({ rdvs, dow }: { rdvs: TodayRdv[]; dow: number }) {
 // ── Main dashboard client ─────────────────────────────────────────────────────
 
 export default function DashboardClient({ userName }: { userName: string }) {
-  const [stats, setStats]         = useState<StatsData | null>(null);
-  const [loading, setLoading]     = useState(true);
-  const [sortAsc, setSortAsc]     = useState(false);
-  const [sparkData, setSparkData] = useState<number[]>([]);
+  const [stats, setStats]             = useState<StatsData | null>(null);
+  const [loading, setLoading]         = useState(true);
+  const [sortAsc, setSortAsc]         = useState(false);
+  const [sparkData, setSparkData]     = useState<number[]>([]);
+  const [showCreateModal, setShowCreateModal] = useState(false);
+  const [clients, setClients]         = useState<Client[]>([]);
+
+  useEffect(() => {
+    fetch("/api/admin/clients")
+      .then((r) => r.json())
+      .then(setClients)
+      .catch(() => {});
+  }, []);
 
   // Primary dashboard fetch — initial load + 30s polling
   const fetchStats = useCallback(() => {
@@ -439,8 +449,8 @@ export default function DashboardClient({ userName }: { userName: string }) {
           <span className="text-zinc-600 font-normal"> · </span>
           <span className="text-zinc-400 font-normal capitalize text-base">{dateStr}</span>
         </h1>
-        <Link
-          href="/admin/tickets"
+        <button
+          onClick={() => setShowCreateModal(true)}
           className="inline-flex items-center gap-2 px-4 py-2 rounded-lg text-white text-sm font-semibold transition-all hover:opacity-90 active:scale-[0.98]"
           style={{ backgroundColor: "#F47920" }}
         >
@@ -448,7 +458,7 @@ export default function DashboardClient({ userName }: { userName: string }) {
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
           </svg>
           Nouveau ticket
-        </Link>
+        </button>
       </div>
 
       {loading ? (
@@ -644,6 +654,14 @@ export default function DashboardClient({ userName }: { userName: string }) {
 
           </div>
         </div>
+      )}
+
+      {showCreateModal && (
+        <CreateTicketModal
+          clients={clients}
+          onClose={() => setShowCreateModal(false)}
+          onSuccess={() => { setShowCreateModal(false); fetchStats(); }}
+        />
       )}
     </div>
   );
