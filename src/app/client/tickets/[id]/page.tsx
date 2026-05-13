@@ -134,9 +134,9 @@ export default function ClientTicketDetailPage() {
 
         {/* Notes */}
         {ticket.notesPubliques && (
-          <div className="bg-blue-50 rounded-xl border border-blue-100 p-6">
-            <h2 className="font-semibold text-blue-900 mb-2">Message de l&apos;atelier</h2>
-            <p className="text-sm text-blue-800">{ticket.notesPubliques}</p>
+          <div className="bg-stihl-50 rounded-xl border border-stihl-200 p-6">
+            <h2 className="font-semibold text-stihl-700 mb-2">Message de l&apos;atelier</h2>
+            <p className="text-sm text-stihl-600">{ticket.notesPubliques}</p>
           </div>
         )}
       </div>

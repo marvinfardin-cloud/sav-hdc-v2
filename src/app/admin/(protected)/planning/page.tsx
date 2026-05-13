@@ -26,10 +26,10 @@ interface Rdv {
 const RDV_CONFIG: Record<string, { label: string; bg: string; border: string; badge: string; dot: string }> = {
   depot: {
     label: "Dépôt",
-    bg: "bg-blue-50/60",
-    border: "border-l-blue-400",
-    badge: "bg-blue-100 text-blue-800",
-    dot: "bg-blue-500",
+    bg: "bg-stihl-50/60",
+    border: "border-l-stihl-400",
+    badge: "bg-stihl-100 text-stihl-700",
+    dot: "bg-stihl-500",
   },
   retrait: {
     label: "Retrait",

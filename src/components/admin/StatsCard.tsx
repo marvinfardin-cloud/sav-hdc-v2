@@ -12,7 +12,7 @@ interface StatsCardProps {
 export function StatsCard({ title, value, subtitle, icon, color = "navy", href }: StatsCardProps) {
   const colors = {
     navy: { bg: "bg-navy-50", icon: "bg-navy-100 text-navy-700", text: "text-navy-700" },
-    blue: { bg: "bg-blue-50", icon: "bg-blue-100 text-blue-700", text: "text-blue-700" },
+    blue: { bg: "bg-stihl-50", icon: "bg-stihl-100 text-stihl-700", text: "text-stihl-700" },
     green: { bg: "bg-green-50", icon: "bg-green-100 text-green-700", text: "text-green-700" },
     orange: { bg: "bg-orange-50", icon: "bg-orange-100 text-orange-700", text: "text-orange-700" },
     purple: { bg: "bg-purple-50", icon: "bg-purple-100 text-purple-700", text: "text-purple-700" },

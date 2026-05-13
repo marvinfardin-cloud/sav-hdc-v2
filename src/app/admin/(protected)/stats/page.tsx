@@ -89,14 +89,14 @@ const STATUT_COLORS: Record<string, string> = {
   RECU:           "#F47920",
   DIAGNOSTIC:     "#8B5CF6",
   ATTENTE_PIECES: "#6B7280",
-  EN_REPARATION:  "#3B82F6",
+  EN_REPARATION:  "#F47920",
   PRET:           "#F59E0B",
   LIVRE:          "#10B981",
 };
 
 const BRAND_COLORS: Record<string, string> = {
   STIHL:     "#F47920",
-  VIKING:    "#3b82f6",
+  VIKING:    "#F47920",
   HONDA:     "#22c55e",
   HUSQVARNA: "#eab308",
   BUGNOT:    "#8b5cf6",

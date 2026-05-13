@@ -24,17 +24,17 @@ function baseTemplate(content: string): string {
   <style>
     body { margin: 0; padding: 0; font-family: Arial, Helvetica, sans-serif; background-color: #f4f6f9; }
     .container { max-width: 600px; margin: 30px auto; background-color: #ffffff; border-radius: 8px; overflow: hidden; box-shadow: 0 2px 8px rgba(0,0,0,0.1); }
-    .header { background-color: #1e3a5f; padding: 30px 40px; text-align: center; }
+    .header { background-color: #F47920; padding: 30px 40px; text-align: center; }
     .header h1 { color: #ffffff; margin: 0; font-size: 22px; font-weight: 700; letter-spacing: 0.5px; }
-    .header p { color: #a8bcd4; margin: 8px 0 0; font-size: 13px; }
+    .header p { color: rgba(255,255,255,0.8); margin: 8px 0 0; font-size: 13px; }
     .body { padding: 40px; }
-    .body h2 { color: #1e3a5f; margin: 0 0 20px; font-size: 20px; }
+    .body h2 { color: #D96A18; margin: 0 0 20px; font-size: 20px; }
     .body p { color: #4a5568; line-height: 1.7; margin: 0 0 16px; }
-    .info-box { background: #f0f4f9; border-left: 4px solid #1e3a5f; border-radius: 4px; padding: 16px 20px; margin: 20px 0; }
+    .info-box { background: #FFF8F2; border-left: 4px solid #F47920; border-radius: 4px; padding: 16px 20px; margin: 20px 0; }
     .info-box p { margin: 6px 0; color: #2d3748; font-size: 14px; }
-    .info-box strong { color: #1e3a5f; }
-    .btn { display: inline-block; background-color: #1e3a5f; color: #ffffff !important; text-decoration: none; padding: 14px 32px; border-radius: 6px; font-weight: 600; font-size: 15px; margin: 20px 0; }
-    .status-badge { display: inline-block; padding: 4px 12px; border-radius: 20px; font-size: 12px; font-weight: 600; background: #dbeafe; color: #1e40af; }
+    .info-box strong { color: #D96A18; }
+    .btn { display: inline-block; background-color: #F47920; color: #ffffff !important; text-decoration: none; padding: 14px 32px; border-radius: 6px; font-weight: 600; font-size: 15px; margin: 20px 0; }
+    .status-badge { display: inline-block; padding: 4px 12px; border-radius: 20px; font-size: 12px; font-weight: 600; background: #FFE8CC; color: #C05A10; }
     .footer { background: #f8fafc; padding: 24px 40px; text-align: center; border-top: 1px solid #e2e8f0; }
     .footer p { color: #94a3b8; font-size: 12px; margin: 4px 0; }
   </style>

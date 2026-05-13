@@ -226,7 +226,7 @@ export default function TicketDetailPage() {
             {ticket.notesPubliques && (
               <div className="mt-4">
                 <p className="text-gray-500 text-xs uppercase tracking-wide mb-2">Notes publiques</p>
-                <p className="text-gray-800 bg-blue-50 rounded-lg p-3 text-sm border border-blue-100">{ticket.notesPubliques}</p>
+                <p className="text-gray-800 bg-stihl-50 rounded-lg p-3 text-sm border border-stihl-200">{ticket.notesPubliques}</p>
               </div>
             )}
             {ticket.notesPrivees && (

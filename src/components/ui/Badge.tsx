@@ -28,7 +28,7 @@ interface GenericBadgeProps {
 
 export function Badge({ children, variant = "blue", size = "md" }: GenericBadgeProps) {
   const variants = {
-    blue: "bg-blue-100 text-blue-800",
+    blue: "bg-stihl-100 text-stihl-700",
     green: "bg-green-100 text-green-800",
     orange: "bg-orange-100 text-orange-800",
     red: "bg-red-100 text-red-800",

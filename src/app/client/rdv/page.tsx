@@ -314,7 +314,7 @@ export default function RdvPage() {
             )}
           </div>
 
-          <div className="bg-blue-50 border border-blue-100 rounded-lg p-3 text-sm text-blue-700">
+          <div className="bg-stihl-50 border border-stihl-200 rounded-lg p-3 text-sm text-stihl-700">
             <p>Une confirmation sera envoyée par <strong>email et WhatsApp</strong> après validation.</p>
           </div>
 

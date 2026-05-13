@@ -9,7 +9,7 @@ export const STATUT_LABELS: Record<string, string> = {
 };
 
 export const STATUT_COLORS: Record<string, string> = {
-  RECU: "bg-blue-100 text-blue-800",
+  RECU: "bg-stihl-100 text-stihl-700",
   DIAGNOSTIC: "bg-yellow-100 text-yellow-800",
   ATTENTE_PIECES: "bg-orange-100 text-orange-800",
   EN_REPARATION: "bg-purple-100 text-purple-800",
@@ -35,7 +35,7 @@ export const RDV_TYPE_LABELS: Record<string, string> = {
 };
 
 export const RDV_TYPE_COLORS: Record<string, string> = {
-  depot: "bg-blue-100 text-blue-800 border-blue-200",
+  depot: "bg-stihl-100 text-stihl-700 border-stihl-200",
   retrait: "bg-green-100 text-green-800 border-green-200",
   diagnostic: "bg-orange-100 text-orange-800 border-orange-200",
 };

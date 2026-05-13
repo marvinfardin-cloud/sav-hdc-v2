@@ -40,7 +40,7 @@ interface TodayRdv {
 // ── Constants ─────────────────────────────────────────────────────────────────
 
 const STATUS_CONFIG: Record<string, { label: string; color: string }> = {
-  RECU:           { label: "Reçu",           color: "#3B82F6" },
+  RECU:           { label: "Reçu",           color: "#F47920" },
   DIAGNOSTIC:     { label: "Diagnostic",     color: "#8B5CF6" },
   ATTENTE_PIECES: { label: "Attente pièces", color: "#6B7280" },
   EN_REPARATION:  { label: "En réparation",  color: "#F47920" },
@@ -51,7 +51,7 @@ const STATUS_CONFIG: Record<string, { label: string; color: string }> = {
 const STATUS_ORDER = ["RECU", "DIAGNOSTIC", "ATTENTE_PIECES", "EN_REPARATION", "PRET", "LIVRE"];
 
 const RDV_COLOR: Record<string, string> = {
-  depot:      "#3b82f6",
+  depot:      "#F47920",
   retrait:    "#22c55e",
   diagnostic: "#F47920",
 };
@@ -516,13 +516,13 @@ export default function DashboardClient({ userName }: { userName: string }) {
               label="RDV aujourd'hui"
               value={stats?.todayAppointments ?? 0}
               sub="Rendez-vous du jour"
-              accentColor="#3B82F6"
+              accentColor="#F47920"
               href="/admin/planning"
               sparkData={sparkData}
               icon={
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
-                  <rect x="4" y="5.5" width="16" height="14.5" rx="2.2" stroke="#3B82F6" strokeWidth="1.7"/>
-                  <path d="M4 10h16M8.5 3.5v4M15.5 3.5v4" stroke="#3B82F6" strokeWidth="1.7" strokeLinecap="round"/>
+                  <rect x="4" y="5.5" width="16" height="14.5" rx="2.2" stroke="#F47920" strokeWidth="1.7"/>
+                  <path d="M4 10h16M8.5 3.5v4M15.5 3.5v4" stroke="#F47920" strokeWidth="1.7" strokeLinecap="round"/>
                 </svg>
               }
             />
