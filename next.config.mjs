@@ -4,7 +4,7 @@ import { join } from "path";
 const nextConfig = {
   generateBuildId: async () => Date.now().toString(),
   experimental: {
-    serverComponentsExternalPackages: ["@prisma/client", "prisma"],
+    serverComponentsExternalPackages: ["@prisma/client", "prisma", "web-push"],
     outputFileTracingIncludes: {
       "**/*": [join("./src/generated/prisma/**")],
     },

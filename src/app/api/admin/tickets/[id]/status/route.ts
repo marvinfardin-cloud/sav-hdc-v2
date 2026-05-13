@@ -3,8 +3,19 @@ import { prisma } from "@/lib/prisma";
 import { getAdminSession } from "@/lib/auth";
 import { sendStatusUpdate } from "@/lib/email";
 import { sendWhatsAppStatusUpdate } from "@/lib/whatsapp";
+import { sendPushToClient } from "@/lib/push";
 import { noCacheHeaders } from "@/lib/utils";
 import { Statut } from "@/generated/prisma";
+
+const STATUT_PUSH_LABELS: Record<string, string> = {
+  RECU:           "Reçu",
+  DIAGNOSTIC:     "En diagnostic",
+  ATTENTE_PIECES: "En attente de pièces",
+  EN_REPARATION:  "En réparation",
+  PRET:           "Prêt à récupérer — venez chercher votre machine !",
+  LIVRE:          "Livré",
+  CLOTURE:        "Clôturé",
+};
 
 export async function POST(
   request: NextRequest,
@@ -68,6 +79,14 @@ export async function POST(
     }
 
     await Promise.all(notifications);
+
+    // Fire-and-forget push notification
+    sendPushToClient(
+      ticket.clientId,
+      `Ticket ${ticket.numero}`,
+      STATUT_PUSH_LABELS[ticket.statut] ?? ticket.statut,
+      "/client/dashboard"
+    ).catch((e) => console.error("Push error:", e));
 
     return NextResponse.json(ticket, { headers: noCacheHeaders() });
   } catch (error) {

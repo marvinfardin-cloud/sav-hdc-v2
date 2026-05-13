@@ -4,6 +4,7 @@ import "./globals.css";
 export const metadata: Metadata = {
   title: "Les Hauts de Californie — SAV",
   description: "Service Après-Vente — Matériels de Jardinage, Martinique",
+  manifest: "/manifest.json",
   icons: {
     icon: "/favicon.ico",
     shortcut: "/favicon.ico",

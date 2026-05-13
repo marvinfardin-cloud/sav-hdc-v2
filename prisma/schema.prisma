@@ -55,9 +55,20 @@ model Client {
   resetToken        String?
   resetTokenExpiry  DateTime?
   createdAt         DateTime     @default(now())
-  tickets      Ticket[]
-  rdvs         RendezVous[]
-  sessions     Session[]
+  tickets           Ticket[]
+  rdvs              RendezVous[]
+  sessions          Session[]
+  pushSubscriptions PushSubscription[]
+}
+
+model PushSubscription {
+  id        String   @id @default(cuid())
+  clientId  String
+  client    Client   @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  endpoint  String   @unique
+  p256dh    String
+  auth      String
+  createdAt DateTime @default(now())
 }
 
 model Ticket {

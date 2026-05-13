@@ -1,0 +1,22 @@
+{
+  "name": "Les Hauts de Californie — SAV",
+  "short_name": "SAV HDC",
+  "description": "Service Après-Vente — Matériels de Jardinage",
+  "start_url": "/client/dashboard",
+  "display": "standalone",
+  "background_color": "#FAFAF7",
+  "theme_color": "#F47920",
+  "icons": [
+    {
+      "src": "/apple-touch-icon.png",
+      "sizes": "180x180",
+      "type": "image/png"
+    },
+    {
+      "src": "/logo.png",
+      "sizes": "any",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ]
+}

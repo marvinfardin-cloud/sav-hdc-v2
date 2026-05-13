@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getAdminSession } from "@/lib/auth";
+import { sendPushToClient } from "@/lib/push";
 import { noCacheHeaders } from "@/lib/utils";
 
 export async function GET(request: NextRequest, { params }: { params: { id: string } }) {
@@ -50,6 +51,14 @@ export async function POST(request: NextRequest, { params }: { params: { id: str
       attachments,
     },
   });
+
+  // Fire-and-forget push notification to the client
+  sendPushToClient(
+    ticket.clientId,
+    `Nouveau message — ${ticket.numero}`,
+    content?.trim() || "Vous avez reçu un nouveau message",
+    "/client/dashboard"
+  ).catch((e) => console.error("Push error:", e));
 
   return NextResponse.json(message, { status: 201, headers: noCacheHeaders() });
 }
